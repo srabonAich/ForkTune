@@ -5,6 +5,7 @@ import 'package:my_first_app/screens/welcome_page.dart';
 import 'package:my_first_app/screens/about_us_page.dart';
 import 'package:my_first_app/screens/edit_profile_screen.dart';
 import 'package:my_first_app/screens/profile_page.dart';
+import 'package:my_first_app/screens/home_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -22,6 +23,7 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: '/launch',
       routes: {
+        '/home': (context) => const HomePage(),
         '/launch': (context) => const LaunchScreen(),
         '/': (context) => const SignUpPage(),
         '/profile': (context) => const ProfilePage(),
