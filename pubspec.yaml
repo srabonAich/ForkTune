@@ -30,5 +30,6 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/
     - assets/team/
     - assets/images/launch_image.png
