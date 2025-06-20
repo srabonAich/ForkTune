@@ -211,12 +211,17 @@ class HomePage extends StatelessWidget {
                         style: TextStyle(
                             fontSize: 20, fontWeight: FontWeight.bold)),
                     Row(
-                      children: const [
-                        Icon(Icons.notifications_none),
-                        SizedBox(width: 12),
-                        CircleAvatar(
-                          backgroundImage: AssetImage('assets/user.png'),
-                          radius: 16,
+                      children:  [
+                        const Icon(Icons.notifications_none),
+                        const SizedBox(width: 12),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/profile');
+                          },
+                          child: const CircleAvatar(
+                            backgroundImage: AssetImage('assets/user.png'),
+                            radius: 16,
+                          ),
                         )
                       ],
                     )
@@ -276,13 +281,13 @@ class HomePage extends StatelessWidget {
                   physics: const NeverScrollableScrollPhysics(),
                   children: [
                     _buildRecommendationCard(
-                        'Fresh Salad Bowl', 'assets/salad.jpg'),
+                        context,'Fresh Salad Bowl', 'assets/salad.jpg'),
                     _buildRecommendationCard(
-                        'Decadent Chocolate Cake', 'assets/cake.jpg'),
+                        context,'Decadent Chocolate Cake', 'assets/cake.jpg'),
                     _buildRecommendationCard(
-                        'Grilled Salmon with Asparagus', 'assets/salmon.jpg'),
+                        context,'Grilled Salmon with Asparagus', 'assets/salmon.jpg'),
                     _buildRecommendationCard(
-                        'Chicken Curry with Rice', 'assets/curry.jpg'),
+                        context,'Chicken Curry with Rice', 'assets/curry.jpg'),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -350,35 +355,41 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildRecommendationCard(String title, String imagePath) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(12)),
-            child: Image.asset(
-              imagePath,
-              height: 100,
-              width: double.infinity,
-              fit: BoxFit.cover,
+  Widget _buildRecommendationCard(BuildContext context,String title, String imagePath) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(context, '/recipe');
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(12)),
+              child: Image.asset(
+                imagePath,
+                height: 100,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
             ),
-          ),
-          Padding(
-            padding:
-            const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
-            child: Text(title,
-                style: const TextStyle(
-                    fontSize: 14, fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
-    );
+            Padding(
+              padding:
+              const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+              child: Text(title,
+                  style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      )
+    ) ;
+
   }
 
   Widget _buildQuickAccessCard(IconData icon, String label) {

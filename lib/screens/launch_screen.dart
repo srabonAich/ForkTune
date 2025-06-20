@@ -34,7 +34,7 @@ class LaunchScreen extends StatelessWidget {
                   'Your Personalized Cooking Journey',
                   style: TextStyle(
                     fontSize: 16,
-                    color: Colors.grey,
+                    color: Colors.black,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -54,7 +54,7 @@ class LaunchScreen extends StatelessWidget {
                     ),
                     child: const Text(
                       'Get Started',
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(fontSize: 16, color: Colors.white),
                     ),
                   ),
                 ),

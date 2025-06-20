@@ -3,11 +3,12 @@ import 'package:my_first_app/screens/signup_screen.dart';
 import 'package:my_first_app/screens/launch_screen.dart';
 import 'package:my_first_app/screens/welcome_page.dart';
 import 'package:my_first_app/screens/about_us_page.dart';
-import 'package:my_first_app/screens/edit_profile_screen.dart';
 import 'package:my_first_app/screens/profile_page.dart';
+import 'package:my_first_app/screens/EditProfilePage.dart';
 import 'package:my_first_app/screens/home_page.dart';
 import 'package:my_first_app/screens/meal_planner_page.dart';
 import 'package:my_first_app/screens/recipe_screen.dart';
+import 'package:my_first_app/screens/login_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -23,12 +24,13 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      initialRoute: '/recipe',
+      initialRoute: '/launch',
       routes: {
-        '/home': (context) => const HomePage(),
         '/launch': (context) => const LaunchScreen(),
-        '/': (context) => const SignUpPage(),
-        //'/profile': (context) => const ProfilePage(),
+        '/': (context) => const LoginScreen(),
+        '/signup': (context) => const SignUpPage(),
+        '/home': (context) => const HomePage(),
+        '/profile': (context) => const ProfilePage(),
         '/meal-planning': (context) => const MealPlanningPage(),
         '/recipe': (context) => const RecipeScreen(),
         '/edit-profile': (context) => const EditProfilePage(),
