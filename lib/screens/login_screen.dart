@@ -120,11 +120,16 @@ class _LoginScreenState extends State<LoginScreen> {
 }
 
 
+
+
+
+
 //==========DYNAMIC=========//
 /*
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:my_first_app/screens/signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -138,31 +143,42 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  // Backend API URL (Spring Boot backend)
-  final String apiUrl = 'http://your-backend-url/api/auth/login';  // replace with actual backend URL
+  final String apiUrl = 'http://backend-url/api/auth/login';
 
-  // Login request
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
       final email = _emailController.text.trim();
       final password = _passwordController.text.trim();
 
-      final response = await http.post(
-        Uri.parse(apiUrl),
-        headers: {"Content-Type": "application/json"},
-        body: json.encode({
-          'email': email,
-          'password': password,
-        }),
-      );
+      try {
+        final response = await http.post(
+          Uri.parse(apiUrl),
+          headers: {"Content-Type": "application/json"},
+          body: json.encode({
+            'email': email,
+            'password': password,
+          }),
+        );
 
-      if (response.statusCode == 200) {
-        // Login successful, navigate to Home
-        Navigator.pushNamed(context, '/home');
-      } else {
-        // Handle invalid login attempt
+        if (response.statusCode == 200) {
+          final userData = json.decode(response.body);
+
+          Navigator.pushNamed(context, '/profile', arguments: {
+            'name': userData['name'],
+            'email': userData['email'],
+            'dietary': userData['dietary'],
+            'allergy': userData['allergy'],
+            'cuisine': userData['cuisine'],
+            'skillLevel': userData['skillLevel'],
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Invalid credentials')),
+          );
+        }
+      } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Invalid credentials')),
+          SnackBar(content: Text('Login failed: $e')),
         );
       }
     }
@@ -212,8 +228,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   labelText: 'Password',
                   prefixIcon: Icon(Icons.lock),
                 ),
-                validator: (v) =>
-                    (v == null || v.length < 6) ? 'Password must be at least 6 characters' : null,
+                validator: (v) => (v == null || v.length < 6)
+                    ? 'Password must be at least 6 characters'
+                    : null,
               ),
               const SizedBox(height: 32),
               ElevatedButton(
@@ -225,7 +242,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: const Text("Log In", style: TextStyle(fontSize: 16, color: Colors.white)),
+                child: const Text(
+                  "Log In",
+                  style: TextStyle(fontSize: 16, color: Colors.white),
+                ),
               ),
               const SizedBox(height: 16),
               Row(
@@ -253,5 +273,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-
  */

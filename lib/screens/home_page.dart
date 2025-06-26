@@ -243,7 +243,6 @@ class HomePage extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
-                // Featured Recipes
                 const Text('Featured Recipes',
                     style:
                     TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -268,7 +267,6 @@ class HomePage extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
-                // Personalized Recommendations
                 const Text('Personalized Recommendations',
                     style:
                     TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -421,3 +419,364 @@ class HomePage extends StatelessWidget {
     );
   }
 }
+
+
+//=========dynamic=========//
+/*
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
+  @override
+  _HomePageState createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final String featuredRecipesUrl = 'http://backend-url/api/recipes/featured';
+  final String recommendationsUrl = 'http://backend-url/api/recipes/recommendations';
+
+  final TextEditingController _searchController = TextEditingController();
+
+  List<dynamic> allFeaturedRecipes = [];
+  List<dynamic> filteredFeaturedRecipes = [];
+  List<dynamic> allRecommendations = [];
+  List<dynamic> filteredRecommendations = [];
+
+  Future<List<dynamic>> _fetchFeaturedRecipes() async {
+    final response = await http.get(Uri.parse(featuredRecipesUrl));
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Failed to load featured recipes');
+    }
+  }
+
+  Future<List<dynamic>> _fetchRecommendations() async {
+    final response = await http.get(Uri.parse(recommendationsUrl));
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Failed to load recommendations');
+    }
+  }
+
+  void _filterSearchResults(String query) {
+    setState(() {
+      filteredFeaturedRecipes = allFeaturedRecipes
+          .where((recipe) => recipe['title'].toLowerCase().contains(query.toLowerCase()))
+          .toList();
+
+      filteredRecommendations = allRecommendations
+          .where((recipe) => recipe['title'].toLowerCase().contains(query.toLowerCase()))
+          .toList();
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    _fetchFeaturedRecipes().then((recipes) {
+      setState(() {
+        allFeaturedRecipes = recipes;
+        filteredFeaturedRecipes = recipes;
+      });
+    });
+
+    _fetchRecommendations().then((recommendations) {
+      setState(() {
+        allRecommendations = recommendations;
+        filteredRecommendations = recommendations;
+      });
+    });
+
+    _searchController.addListener(() {
+      _filterSearchResults(_searchController.text);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: 0,
+        onTap: (index) {
+          if (index == 1) {
+            Navigator.pushNamed(context, '/meal-planning');
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: 'Meal Planning'),
+        ],
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Forktune',
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold)),
+                    Row(
+                      children: [
+                        const Icon(Icons.notifications_none),
+                        const SizedBox(width: 12),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/profile');
+                          },
+                          child: const CircleAvatar(
+                            backgroundImage: AssetImage('assets/user.png'),
+                            radius: 16,
+                          ),
+                        )
+                      ],
+                    )
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search for recipes...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                const Text('Featured Recipes',
+                    style:
+                    TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                filteredFeaturedRecipes.isEmpty
+                    ? const Center(child: CircularProgressIndicator())
+                    : SizedBox(
+                        height: 180,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: filteredFeaturedRecipes.map<Widget>((recipe) {
+                            return _buildFeaturedCard(
+                              context,
+                              recipe['title'],
+                              recipe['imageUrl'],
+                              recipe['description'], // Add description to pass
+                              recipe['ingredients'],  // Add ingredients
+                              recipe['instructions'], // Add instructions
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                const SizedBox(height: 24),
+
+                const Text('Personalized Recommendations',
+                    style:
+                    TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                filteredRecommendations.isEmpty
+                    ? const Center(child: CircularProgressIndicator())
+                    : GridView.builder(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                        ),
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: filteredRecommendations.length,
+                        itemBuilder: (context, index) {
+                          final recipe = filteredRecommendations[index];
+                          return _buildRecommendationCard(
+                            context,
+                            recipe['title'],
+                            recipe['imageUrl'],
+                            recipe['description'], // Add description to pass
+                            recipe['ingredients'],  // Add ingredients
+                            recipe['instructions'], // Add instructions
+                          );
+                        },
+                      ),
+                const SizedBox(height: 24),
+
+                // Quick Access
+                const Text('Quick Access',
+                    style:
+                    TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildQuickAccessCard(Icons.calendar_today, 'Meal Plan'),
+                    _buildQuickAccessCard(Icons.explore, 'Discover'),
+                    _buildQuickAccessCard(Icons.bookmark_border, 'Saved'),
+                  ],
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeaturedCard(BuildContext context, String title, String imagePath, String description, List ingredients, List instructions) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(
+          context,
+          '/recipe',
+          arguments: {
+            'title': title,
+            'image': imagePath,
+            'description': description,
+            'ingredients': ingredients,
+            'instructions': instructions,
+          }
+        );
+      },
+      child: Container(
+        width: 200,
+        margin: const EdgeInsets.only(right: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          image: DecorationImage(
+            image: NetworkImage(imagePath),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              left: 12,
+              bottom: 32,
+              child: Text(
+                title,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    shadows: [Shadow(blurRadius: 4, color: Colors.black)]),
+              ),
+            ),
+            Positioned(
+              left: 12,
+              bottom: 12,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pushNamed(
+                    context,
+                    '/recipe',
+                    arguments: {
+                      'title': title,
+                      'image': imagePath,
+                      'description': description,
+                      'ingredients': ingredients,
+                      'instructions': instructions,
+                    }
+                  );
+                },
+                child: const Text("View Recipe"),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecommendationCard(BuildContext context, String title, String imagePath, String description, List ingredients, List instructions) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(
+          context,
+          '/recipe',
+          arguments: {
+            'title': title,
+            'image': imagePath,
+            'description': description,
+            'ingredients': ingredients,
+            'instructions': instructions,
+          }
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(12)),
+              child: Image.network(
+                imagePath,
+                height: 100,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+            Padding(
+              padding:
+              const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+              child: Text(title,
+                  style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Quick Access Card
+  Widget _buildQuickAccessCard(IconData icon, String label) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          // Navigate based on label
+        },
+        child: Container(
+          height: 80,
+          padding: const EdgeInsets.all(12),
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon),
+              const SizedBox(height: 6),
+              Text(label,
+                  style: const TextStyle(fontSize: 12),
+                  textAlign: TextAlign.center),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+
+ */
