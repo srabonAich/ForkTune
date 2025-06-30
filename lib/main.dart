@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:my_first_app/screens/forgot_password.dart';
+import 'package:my_first_app/screens/notification_screen.dart';
+import 'package:my_first_app/screens/saved_recipe_screen.dart';
 import 'package:my_first_app/screens/signup_screen.dart';
 import 'package:my_first_app/screens/launch_screen.dart';
 import 'package:my_first_app/screens/welcome_page.dart';
@@ -39,6 +41,8 @@ class MyApp extends StatelessWidget {
         //'/welcome': (context) => const WelcomePage(),
         '/about': (context) => const AboutUsPage(),
         '/forgotpassword': (context) => const ForgotPasswordScreen(),
+        '/notifications': (context) => const NotificationScreen(),
+        '/saved-recipe': (context) => const SavedRecipesScreen(),
       },
     );
   }

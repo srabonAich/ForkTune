@@ -886,7 +886,7 @@ class HomePage extends StatelessWidget {
           Navigator.pushNamed(context, '/discover');
         }),
         _buildQuickAccessCard(Icons.bookmark_border, 'Saved', () {
-          Navigator.pushNamed(context, '/saved');
+          Navigator.pushNamed(context, '/saved-recipe');
         }),
       ],
     );
