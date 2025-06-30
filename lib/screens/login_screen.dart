@@ -603,7 +603,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                       alignment: Alignment.centerRight,
                                       child: TextButton(
                                         onPressed: () {
-                                          // Add forgot password functionality
+                                          Navigator.pushNamed(context, '/forgotpassword');
                                         },
                                         child: const Text(
                                           'Forgot Password?',

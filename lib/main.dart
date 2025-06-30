@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_first_app/screens/forgot_password.dart';
 import 'package:my_first_app/screens/signup_screen.dart';
 import 'package:my_first_app/screens/launch_screen.dart';
 import 'package:my_first_app/screens/welcome_page.dart';
@@ -37,6 +38,7 @@ class MyApp extends StatelessWidget {
         '/edit-profile': (context) => const EditProfilePage(),
         //'/welcome': (context) => const WelcomePage(),
         '/about': (context) => const AboutUsPage(),
+        '/forgotpassword': (context) => const ForgotPasswordScreen(),
       },
     );
   }
