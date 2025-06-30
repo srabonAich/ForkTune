@@ -32,9 +32,11 @@ flutter:
   assets:
     - assets/
     - assets/team/
+    - assets/images/
     - assets/images/launch_image.png
     - assets/images/leaf1.png
     - assets/images/cloud1.png
     - assets/images/cabbage.png
     - assets/images/cauliflower.png
     - assets/images/pan2.png
+    - assets/signup.jpg

@@ -1,3 +1,4 @@
+/*
 // import 'package:flutter/material.dart';
 // import '../services/api_service.dart';
 //
@@ -136,16 +137,10 @@
 //   }
 // }
 //
-//
-//
-//
-//
-//
-//
-//
-//
-//
-// /*import 'package:flutter/material.dart';
+*/
+
+/*
+ import 'package:flutter/material.dart';
 //
 // class ProfilePage extends StatelessWidget {
 //   const ProfilePage({super.key});
@@ -253,9 +248,9 @@
 //     );
 //   }
 // }
-// */
+ */
 
-
+/*
 import 'package:flutter/material.dart';
 
 class EditProfilePage extends StatefulWidget {
@@ -462,6 +457,401 @@ class _EditProfilePageState extends State<EditProfilePage> {
               .toList(),
           decoration: InputDecoration(
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+      ],
+    );
+  }
+}
+*/
+
+//new
+
+import 'package:flutter/material.dart';
+
+class EditProfilePage extends StatefulWidget {
+  const EditProfilePage({super.key});
+
+  @override
+  State<EditProfilePage> createState() => _EditProfilePageState();
+}
+
+class _EditProfilePageState extends State<EditProfilePage> {
+  // original values (could come from backend later)
+  final String originalDietary = "Vegetarian";
+  final String originalAllergy = "None";
+  final String originalCuisine = "Italian";
+  final String originalSkill = "Intermediate";
+
+  // current selected values
+  late String dietary;
+  late String allergy;
+  late String cuisine;
+  late String skill;
+
+  bool isChanged = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize values
+    dietary = originalDietary;
+    allergy = originalAllergy;
+    cuisine = originalCuisine;
+    skill = originalSkill;
+  }
+
+  void _checkChanges() {
+    setState(() {
+      isChanged = dietary != originalDietary ||
+          allergy != originalAllergy ||
+          cuisine != originalCuisine ||
+          skill != originalSkill;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          "Edit Profile",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+        actions: [
+          if (isChanged)
+            TextButton(
+              onPressed: () {
+                // Handle update submission
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text("Profile updated successfully"),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                );
+              },
+              child: const Text(
+                "SAVE",
+                style: TextStyle(
+                  color: Color(0xFF7F56D9),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Profile Picture Section
+            Center(
+              child: Stack(
+                children: [
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFF7F56D9).withOpacity(0.2),
+                        width: 2,
+                      ),
+                    ),
+                    child: const CircleAvatar(
+                      radius: 58,
+                      backgroundColor: Color(0xFFF5F3FF),
+                      child: Icon(
+                        Icons.person,
+                        size: 50,
+                        color: Color(0xFF7F56D9),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF7F56D9),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white,
+                          width: 2,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.edit,
+                        size: 18,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Basic Information
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8.0),
+              child: Text(
+                "Basic Information",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            _buildReadOnlyField(
+              label: "Username",
+              value: "Alice Smith",
+              icon: Icons.person_outline,
+            ),
+            const SizedBox(height: 16),
+
+            _buildReadOnlyField(
+              label: "Email Address",
+              value: "alice.smith@example.com",
+              icon: Icons.email_outlined,
+            ),
+
+            const SizedBox(height: 24),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8.0),
+              child: Text(
+                "Cooking Preferences",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            _buildDropdownField(
+              label: "Dietary Restrictions",
+              value: dietary,
+              icon: Icons.restaurant,
+              options: ["None", "Vegetarian", "Vegan", "Pescatarian", "Halal", "Kosher"],
+              onChanged: (val) {
+                setState(() {
+                  dietary = val!;
+                  _checkChanges();
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+
+            _buildDropdownField(
+              label: "Allergies",
+              value: allergy,
+              icon: Icons.health_and_safety,
+              options: ["None", "Peanuts", "Gluten", "Dairy", "Shellfish", "Soy"],
+              onChanged: (val) {
+                setState(() {
+                  allergy = val!;
+                  _checkChanges();
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+
+            _buildDropdownField(
+              label: "Cuisine Preferences",
+              value: cuisine,
+              icon: Icons.flag,
+              options: ["Italian", "Chinese", "Indian", "Mexican", "Thai", "American"],
+              onChanged: (val) {
+                setState(() {
+                  cuisine = val!;
+                  _checkChanges();
+                });
+              },
+            ),
+
+            const SizedBox(height: 24),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8.0),
+              child: Text(
+                "Skill Level",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            _buildDropdownField(
+              label: "Cooking Skill Level",
+              value: skill,
+              icon: Icons.star,
+              options: ["Beginner", "Intermediate", "Advanced", "Professional"],
+              onChanged: (val) {
+                setState(() {
+                  skill = val!;
+                  _checkChanges();
+                });
+              },
+            ),
+
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: isChanged
+                    ? () {
+                  // Handle update submission
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text("Profile updated successfully"),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  );
+                }
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isChanged ? const Color(0xFF7F56D9) : Colors.grey.shade300,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  "UPDATE PROFILE",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReadOnlyField({
+    required String label,
+    required String value,
+    required IconData icon,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 8.0),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: Colors.grey),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDropdownField({
+    required String label,
+    required String value,
+    required IconData icon,
+    required List<String> options,
+    required void Function(String?) onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 8.0),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Colors.grey.shade300,
+              width: 1,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: DropdownButtonFormField<String>(
+              value: value,
+              onChanged: onChanged,
+              items: options
+                  .map((opt) => DropdownMenuItem(
+                value: opt,
+                child: Text(
+                  opt,
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ))
+                  .toList(),
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                prefixIcon: Icon(icon, color: Colors.grey),
+              ),
+              icon: const Icon(Icons.arrow_drop_down),
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
       ],
