@@ -595,27 +595,12 @@ class HomePage extends StatelessWidget {
   }
 
   Widget _buildSectionHeader(String title) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        TextButton(
-          onPressed: () {},
-          child: const Text(
-            'See All',
-            style: TextStyle(
-              color: Color(0xFF6A6CFF),
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+      ),
     );
   }
 
@@ -882,9 +867,6 @@ class HomePage extends StatelessWidget {
         _buildQuickAccessCard(Icons.calendar_today, 'Meal Plan', () {
           Navigator.pushNamed(context, '/meal-planning');
         }),
-        _buildQuickAccessCard(Icons.explore, 'Discover', () {
-          Navigator.pushNamed(context, '/discover');
-        }),
         _buildQuickAccessCard(Icons.bookmark_border, 'Saved', () {
           Navigator.pushNamed(context, '/saved-recipe');
         }),
@@ -1096,9 +1078,9 @@ class _HomePageState extends State<HomePage> {
                               context,
                               recipe['title'],
                               recipe['imageUrl'],
-                              recipe['description'], // Add description to pass
-                              recipe['ingredients'],  // Add ingredients
-                              recipe['instructions'], // Add instructions
+                              recipe['description'],
+                              recipe['ingredients'],
+                              recipe['instructions'],
                             );
                           }).toList(),
                         ),
@@ -1126,9 +1108,9 @@ class _HomePageState extends State<HomePage> {
                             context,
                             recipe['title'],
                             recipe['imageUrl'],
-                            recipe['description'], // Add description to pass
-                            recipe['ingredients'],  // Add ingredients
-                            recipe['instructions'], // Add instructions
+                            recipe['description'],
+                            recipe['ingredients'],
+                            recipe['instructions'],
                           );
                         },
                       ),
@@ -1143,7 +1125,6 @@ class _HomePageState extends State<HomePage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     _buildQuickAccessCard(Icons.calendar_today, 'Meal Plan'),
-                    _buildQuickAccessCard(Icons.explore, 'Discover'),
                     _buildQuickAccessCard(Icons.bookmark_border, 'Saved'),
                   ],
                 ),
@@ -1267,12 +1248,15 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Quick Access Card
   Widget _buildQuickAccessCard(IconData icon, String label) {
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          // Navigate based on label
+          if (label == 'Meal Plan') {
+            Navigator.pushNamed(context, '/meal-planning');
+          } else if (label == 'Saved') {
+            Navigator.pushNamed(context, '/saved-recipe');
+          }
         },
         child: Container(
           height: 80,
