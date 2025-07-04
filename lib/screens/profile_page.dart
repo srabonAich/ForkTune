@@ -655,7 +655,7 @@ class ProfilePage extends StatelessWidget {
 
  */
 
-//new
+//new user provider
 /*
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart'; // For state management
