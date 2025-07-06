@@ -221,10 +221,829 @@
 //   }
 // }
 
+// Dynamic sign up page with previouse design
 
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter/gestures.dart';
+import 'dart:io';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:mime/mime.dart';
+
+class SignUpPage extends StatefulWidget {
+  const SignUpPage({super.key});
+
+  @override
+  State<SignUpPage> createState() => _SignUpPageState();
+}
+
+class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateMixin {
+  // UI State Variables
+  int _currentStep = 0;
+  bool _isLoading = false;
+  bool _termsAccepted = false;
+  String? _verificationError;
+  final FlutterSecureStorage _secureStorage = FlutterSecureStorage();
+
+  // Form Controllers
+  final _emailController = TextEditingController();
+  final _verificationCodeController = TextEditingController();
+  final _nameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
+  // Profile Data
+  String? _gender;
+  DateTime? _dob;
+  File? _profileImage;
+
+  // Animation
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _emailController.dispose();
+    _verificationCodeController.dispose();
+    _nameController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() => _profileImage = File(pickedFile.path));
+    }
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime(2000),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Colors.deepPurpleAccent,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black,
+            ),
+            dialogBackgroundColor: Colors.white,
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != _dob) {
+      setState(() => _dob = picked);
+    }
+  }
+
+  Future<void> _sendVerificationCode() async {
+    if (_emailController.text.isEmpty || !_emailController.text.contains('@')) {
+      setState(() => _verificationError = 'Please enter a valid email');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _verificationError = null;
+    });
+
+    try {
+      // Backend API call to send verification code
+      final response = await http.post(
+        Uri.parse('http://localhost:8080/send-code'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': _emailController.text.trim()}),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() => _currentStep = 1);
+      } else {
+        setState(() {
+          _verificationError = jsonDecode(response.body)['message'] ??
+              'Failed to send verification code';
+        });
+      }
+    } catch (e) {
+      setState(() => _verificationError = 'Network error: ${e.toString()}');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _verifyCode() async {
+    if (_verificationCodeController.text.isEmpty) {
+      setState(() => _verificationError = 'Please enter verification code');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _verificationError = null;
+    });
+
+    try {
+      // Backend API call to verify code
+      final response = await http.post(
+        Uri.parse('http://localhost:8080/verify-email'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': _emailController.text.trim(),
+          'code': _verificationCodeController.text.trim()
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        // If the response contains the JWT token (code_token)
+        final responseBody = jsonDecode(response.body);
+        final String codeToken = responseBody['code_token'];
+
+        // Store the JWT token securely using flutter_secure_storage
+        await _secureStorage.write(key: 'code_token', value: codeToken);
+
+        setState(() => _currentStep = 2); // Move to the next step
+      } else {
+        setState(() {
+          _verificationError = jsonDecode(response.body)['message'] ??
+              'Invalid verification code';
+        });
+      }
+    } catch (e) {
+      setState(() => _verificationError = 'Network error: ${e.toString()}');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+
+  Future<void> _completeRegistration() async {
+    if (!_termsAccepted || _dob == null || _gender == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill all fields and accept terms'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    if (_passwordController.text != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Passwords do not match'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Retrieve the code_token from secure storage
+      String? codeToken = await _secureStorage.read(key: 'code_token');
+
+      if (codeToken == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Code token is missing, please try again'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+        return;
+      }
+
+      // Convert the profile image to a base64 string if it exists
+      String base64Image = "";
+      String? mimeType;
+
+      if (_profileImage != null) {
+        List<int> imageBytes = await _profileImage!.readAsBytes();
+        base64Image = base64Encode(imageBytes);
+
+        // Use the mime package to get the MIME type from the file extension
+        mimeType = lookupMimeType(_profileImage!.path); // Example: "image/png", "image/jpeg"
+
+        if (mimeType != null) {
+          base64Image = 'data:$mimeType;base64,' + base64Image; // Dynamically prepend MIME type
+        } else {
+          throw Exception("Unable to determine MIME type for the image.");
+        }
+      }
+
+      // Backend API call to complete registration
+      final response = await http.post(
+        Uri.parse('http://localhost:8080/register'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $codeToken',  // Add the token to the headers
+        },
+        body: jsonEncode({
+          'email': _emailController.text.trim(),
+          'name': _nameController.text,
+          'password': _passwordController.text.trim(),
+          'gender': _gender,
+          'dob': DateFormat('yyyy-MM-dd').format(_dob!),
+          'profileImage': _profileImage != null ? base64Image : null, // Include the image data with the correct format
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        Navigator.pushNamed(context, '/home');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(jsonDecode(response.body)['message'] ?? 'Registration failed'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Widget _buildStepIndicator() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _buildStepCircle(0, '1. Email'),
+        _buildStepConnector(),
+        _buildStepCircle(1, '2. Verify'),
+        _buildStepConnector(),
+        _buildStepCircle(2, '3. Profile'),
+      ],
+    );
+  }
+
+  Widget _buildStepCircle(int stepIndex, String label) {
+    return Column(
+      children: [
+        Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: _currentStep >= stepIndex
+                ? Colors.deepPurpleAccent
+                : Colors.grey[300],
+          ),
+          child: Center(
+            child: Text(
+              '${stepIndex + 1}',
+              style: TextStyle(
+                color: _currentStep >= stepIndex ? Colors.white : Colors.grey,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: _currentStep >= stepIndex ? Colors.deepPurpleAccent : Colors.grey,
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStepConnector() {
+    return Container(
+      width: 40,
+      height: 1,
+      color: Colors.grey[300],
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+    );
+  }
+
+  Widget _buildEmailStep() {
+    return Column(
+      children: [
+        const SizedBox(height: 20),
+        Image.asset(
+          'assets/signup.jpg',
+          height: 150,
+          fit: BoxFit.contain,
+        ),
+        const SizedBox(height: 20),
+        const Text(
+          'Create Your Account',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.deepPurple,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'We\'ll send a verification code to your email',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey,
+          ),
+        ),
+        const SizedBox(height: 32),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                spreadRadius: 1,
+                blurRadius: 3,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: TextFormField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: InputDecoration(
+              labelText: 'Email Address',
+              labelStyle: const TextStyle(color: Colors.grey),
+              prefixIcon: const Icon(Icons.email_outlined, color: Colors.grey),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide.none,
+              ),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+          ),
+        ),
+        if (_verificationError != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            _verificationError!,
+            style: const TextStyle(color: Colors.redAccent),
+          ),
+        ],
+        const SizedBox(height: 24),
+        SizedBox(
+          height: 50,
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : _sendVerificationCode,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.deepPurpleAccent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: _isLoading
+                ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation(Colors.white),
+              ),
+            )
+                : const Text(
+              'Send Verification Code',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVerificationStep() {
+    return Column(
+      children: [
+        const SizedBox(height: 20),
+        Image.asset(
+          'assets/verify.jpg',
+          height: 150,
+          fit: BoxFit.contain,
+        ),
+        const SizedBox(height: 20),
+        const Text(
+          'Verify Your Email',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.deepPurple,
+          ),
+        ),
+        const SizedBox(height: 8),
+        RichText(
+          text: TextSpan(
+            style: const TextStyle(fontSize: 14, color: Colors.grey),
+            children: [
+              const TextSpan(text: 'We sent a code to '),
+              TextSpan(
+                text: _emailController.text,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 32),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                spreadRadius: 1,
+                blurRadius: 3,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: TextFormField(
+            controller: _verificationCodeController,
+            decoration: InputDecoration(
+              labelText: 'Verification Code',
+              labelStyle: const TextStyle(color: Colors.grey),
+              prefixIcon: const Icon(Icons.lock_outline, color: Colors.grey),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide.none,
+              ),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+          ),
+        ),
+        if (_verificationError != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            _verificationError!,
+            style: const TextStyle(color: Colors.redAccent),
+          ),
+        ],
+        const SizedBox(height: 16),
+        TextButton(
+          onPressed: _isLoading ? null : _sendVerificationCode,
+          child: const Text(
+            'Resend Code',
+            style: TextStyle(color: Colors.deepPurpleAccent),
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 50,
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : _verifyCode,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.deepPurpleAccent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: _isLoading
+                ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation(Colors.white),
+              ),
+            )
+                : const Text(
+              'Verify Code',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProfileStep() {
+    return Column(
+      children: [
+        const SizedBox(height: 20),
+        Stack(
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.deepPurpleAccent.withOpacity(0.5),
+                  width: 2,
+                ),
+              ),
+              child: ClipOval(
+                child: _profileImage != null
+                    ? Image.file(_profileImage!, fit: BoxFit.cover)
+                    : Image.asset(
+                  'assets/placeholder_profile.png',
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: Container(
+                height: 40,
+                width: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.deepPurpleAccent,
+                  border: Border.all(
+                    color: Colors.white,
+                    width: 2,
+                  ),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
+                  onPressed: _pickImage,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        const Text(
+          'Complete Your Profile',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.deepPurple,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Tell us more about yourself',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey,
+          ),
+        ),
+        const SizedBox(height: 24),
+        _buildTextField(_nameController, 'Full Name', Icons.person_outline),
+        const SizedBox(height: 16),
+        _buildTextField(_passwordController, 'Password', Icons.lock_outline,
+            obscureText: true),
+        const SizedBox(height: 16),
+        _buildTextField(_confirmPasswordController, 'Confirm Password', Icons.lock_outline,
+            obscureText: true),
+        const SizedBox(height: 16),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: DropdownButtonFormField<String>(
+              value: _gender,
+              decoration: const InputDecoration(
+                labelText: 'Gender',
+                border: InputBorder.none,
+                prefixIcon: Icon(Icons.people_outline, color: Colors.grey),
+              ),
+              items: const [
+                DropdownMenuItem(value: 'Male', child: Text('Male')),
+                DropdownMenuItem(value: 'Female', child: Text('Female')),
+                DropdownMenuItem(value: 'Other', child: Text('Other')),
+              ],
+              onChanged: (value) => setState(() => _gender = value),
+              style: const TextStyle(color: Colors.black87),
+              dropdownColor: Colors.white,
+              icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        InkWell(
+          onTap: () => _selectDate(context),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+              child: Row(
+                children: [
+                  const Icon(Icons.calendar_today_outlined, color: Colors.grey),
+                  const SizedBox(width: 12),
+                  Text(
+                    _dob == null
+                        ? 'Select Date of Birth'
+                        : DateFormat('MMMM dd, yyyy').format(_dob!),
+                    style: TextStyle(
+                      color: _dob == null ? Colors.grey[600] : Colors.black87,
+                    ),
+                  ),
+                  const Spacer(),
+                  const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Transform.scale(
+              scale: 0.9,
+              child: Checkbox(
+                value: _termsAccepted,
+                onChanged: (v) => setState(() => _termsAccepted = v ?? false),
+                activeColor: Colors.deepPurpleAccent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+            Expanded(
+              child: RichText(
+                text: TextSpan(
+                  style: const TextStyle(color: Colors.black87, fontSize: 12),
+                  children: [
+                    const TextSpan(text: 'I agree to the '),
+                    TextSpan(
+                      text: 'Terms & Conditions',
+                      style: const TextStyle(
+                        color: Colors.deepPurpleAccent,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () {
+                          // Navigate to terms page
+                        },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        SizedBox(
+          height: 50,
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : _completeRegistration,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.deepPurpleAccent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: _isLoading
+                ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation(Colors.white),
+              ),
+            )
+                : const Text(
+              'Complete Registration',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTextField(
+      TextEditingController controller,
+      String label,
+      IconData icon, {
+        bool obscureText = false,
+      }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 3,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: TextFormField(
+        controller: controller,
+        obscureText: obscureText,
+        style: const TextStyle(color: Colors.black87),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(color: Colors.grey),
+          prefixIcon: Icon(icon, color: Colors.grey),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none,
+          ),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(vertical: 16),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        title: const Text('Create Account',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.deepPurple,
+          ),
+        ),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.deepPurple),
+          onPressed: () {
+            if (_currentStep > 0) {
+              setState(() => _currentStep--);
+            } else {
+              Navigator.pop(context);
+            }
+          },
+        ),
+      ),
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              _buildStepIndicator(),
+              const SizedBox(height: 32),
+              if (_currentStep == 0) _buildEmailStep(),
+              if (_currentStep == 1) _buildVerificationStep(),
+              if (_currentStep == 2) _buildProfileStep(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 //design
-import 'package:flutter/gestures.dart';
+
+/*import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -692,7 +1511,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
   }
 }
 
-
+*/
 
 
 

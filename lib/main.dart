@@ -39,7 +39,7 @@ class MyApp extends StatelessWidget {
         '/meal-planning': (context) => const MealPlanningPage(),
         '/recipe': (context) => const RecipeScreen(),
         '/edit-profile': (context) => const EditProfilePage(),
-        //'/welcome': (context) => const WelcomePage(),
+        // '/welcome': (context) => const WelcomePage(),
         '/about': (context) => const AboutUsPage(),
         '/forgotpassword': (context) => const ForgotPasswordScreen(),
         '/notifications': (context) => const NotificationScreen(),
