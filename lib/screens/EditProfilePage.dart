@@ -467,6 +467,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
 //new
 
+
+/*
 import 'package:flutter/material.dart';
 
 class EditProfilePage extends StatefulWidget {
@@ -858,15 +860,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 }
+*/
 
 //=========dynamic=========//
 
 // new: user provider
-/*
+
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:provider/provider.dart';
-import 'package:my_first_app/models/user.dart';
+import 'package:my_first_app/models/User.dart';
 import 'package:my_first_app/providers/user_provider.dart';
+import 'package:image_picker/image_picker.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -879,6 +884,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late User _currentUser;
   late User _editedUser;
   bool _isLoading = false;
+  File? _selectedImage; // To store the selected image file
 
   @override
   void initState() {
@@ -903,7 +909,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return _editedUser.dietaryRestrictions != _currentUser.dietaryRestrictions ||
         _editedUser.allergies != _currentUser.allergies ||
         _editedUser.cuisinePreferences != _currentUser.cuisinePreferences ||
-        _editedUser.skillLevel != _currentUser.skillLevel;
+        _editedUser.skillLevel != _currentUser.skillLevel ||
+        _selectedImage != null; // Add image change to hasChange
   }
 
   Future<void> _updateProfile() async {
@@ -913,6 +920,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     try {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
+
+      // If there's a new image, upload it first
+      if (_selectedImage != null) {
+        // You'll need to implement this method in your UserProvider
+        final imageUrl = await userProvider.uploadProfileImage(_selectedImage!);
+        _editedUser = _editedUser.copyWith(profileImageUrl: imageUrl);
+      }
+
       await userProvider.updateUser(_editedUser);
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -999,20 +1014,25 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         width: 2,
                       ),
                     ),
-                    child: _currentUser.profileImageUrl != null
+                    child: _selectedImage != null
                         ? CircleAvatar(
                             radius: 58,
-                            backgroundImage: NetworkImage(_currentUser.profileImageUrl!),
+                            backgroundImage: FileImage(_selectedImage!),
                           )
-                        : const CircleAvatar(
-                            radius: 58,
-                            backgroundColor: Color(0xFFF5F3FF),
-                            child: Icon(
-                              Icons.person,
-                              size: 50,
-                              color: Color(0xFF7F56D9),
-                            ),
-                          ),
+                        : _currentUser.profileImageUrl != null
+                            ? CircleAvatar(
+                                radius: 58,
+                                backgroundImage: NetworkImage(_currentUser.profileImageUrl!),
+                              )
+                            : const CircleAvatar(
+                                radius: 58,
+                                backgroundColor: Color(0xFFF5F3FF),
+                                child: Icon(
+                                  Icons.person,
+                                  size: 50,
+                                  color: Color(0xFF7F56D9),
+                                ),
+                              ),
                   ),
                   Positioned(
                     bottom: 0,
@@ -1187,12 +1207,28 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   Future<void> _changeProfilePicture() async {
-    // Implement image picking logic here
-    // This would typically use image_picker package
-    // For now, we'll just show a snackbar
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Profile picture change functionality coming soon")),
-    );
+    try{
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+
+      if(pickedFile != null){
+        setState(){
+          _selectedImage = File(pickedFile.path);
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to pick image: ${e.toString()}"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Widget _buildReadOnlyField({
@@ -1296,4 +1332,3 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 }
- */

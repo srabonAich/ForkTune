@@ -1,5 +1,7 @@
 // new
 
+import 'dart:io';
+import 'package:flutter/material.dart';
 class User {
   final String id;
   final DateTime createdAt;
@@ -15,7 +17,8 @@ class User {
   DateTime? dob;
   List<String>? favoriteRecipes;
   List<String>? savedRecipes;
-  bool? emailVerified;
+  bool emailVerified;
+  File? localProfileImage; // Add this to hold local image file before upload
 
   User({
     required this.id,
@@ -30,7 +33,8 @@ class User {
     this.dob,
     this.favoriteRecipes,
     this.savedRecipes,
-    this.emailVerified,
+    this.emailVerified = false,
+    this.localProfileImage, // Initialize the new field
     DateTime? createdAt,
     this.updatedAt,
   }) : createdAt = createdAt ?? DateTime.now();
@@ -96,6 +100,7 @@ class User {
     List<String>? favoriteRecipes,
     List<String>? savedRecipes,
     bool? emailVerified,
+    File? localProfileImage, // Add this to the copyWith
   }) {
     return User(
       id: id,
@@ -111,9 +116,21 @@ class User {
       favoriteRecipes: favoriteRecipes ?? this.favoriteRecipes,
       savedRecipes: savedRecipes ?? this.savedRecipes,
       emailVerified: emailVerified ?? this.emailVerified,
+      localProfileImage: localProfileImage ?? this.localProfileImage, // Include in copy
       createdAt: createdAt,
-      updatedAt: DateTime.now(),
+      updatedAt: DateTime.now(), // Always update this when copying
     );
+  }
+
+  // Helper method to get the current profile image
+  // Prioritizes local image over network image
+  ImageProvider? get profileImage {
+    if (localProfileImage != null) {
+      return FileImage(localProfileImage!);
+    } else if (profileImageUrl != null) {
+      return NetworkImage(profileImageUrl!);
+    }
+    return null;
   }
 }
 

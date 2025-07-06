@@ -3,6 +3,9 @@ import 'package:my_first_app/models/User.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:io';
+import 'package:path/path.dart' as path;
+import 'package:http_parser/http_parser.dart'; //for media type
 
 class UserProvider with ChangeNotifier {
   User? _currentUser;
@@ -191,6 +194,65 @@ class UserProvider with ChangeNotifier {
         print('Registration error: $e');
       }
     } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String> uploadProfileImage(File imageFile) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try{
+      // create multipart request
+      final uri = Uri.parse('https://my-api.com/users/${_currentUser!.id}/profile-image');
+      var request = http.MultipartRequest('POST', uri);
+
+      // add file to request
+      final fileStream = http.ByteStream(imageFile.openRead());
+      final fileLength = await imageFile.length();
+      final multipartFile = http.MultipartFile(
+        'file',
+        fileStream,
+        fileLength,
+        filename: path.basename(imageFile.path),
+        contentType: MediaType('image', path.extension(imageFile.path).substring(1)),
+      );
+      request.files.add(multipartFile);
+
+      //add authorization token if needed
+      // request.headers['Authorization'] = 'Bearer your_token_here';
+
+      //send request
+      final response = await request.send();
+      final responseData = await response.stream.bytesToString();
+      final parsedResponse = json.decode(responseData);
+
+      if(response.statusCode == 200) {
+        final imageUrl = parsedResponse['imageUrl'] as String;
+
+        //update local user with new img url
+        _currentUser = _currentUser!.copyWith(
+          profileImageUrl: imageUrl,
+          localProfileImage: null, // clear local file reference
+        );
+
+        //update shared preference
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('currentUser', json.encode(_currentUser!.toJson()));
+
+        _error = null;
+        return imageUrl;
+      } else{
+        throw Exception('Failed to upload image: ${parsedResponse['message'] ?? 'Unknown error'}');
+      }
+    } catch(e) {
+      _error = 'Failed to upload profile image';
+      if (kDebugMode){
+        print('Profile image upload error: $e');
+      }
+      rethrow;
+    } finally{
       _isLoading = false;
       notifyListeners();
     }
