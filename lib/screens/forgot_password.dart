@@ -173,7 +173,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 //========latest dynamic========//
 /*
 import 'package:flutter/material.dart';
-import 'package:my_first_app/services/auth_service.dart'; // Import your auth service
+import 'package:my_first_app/services/auth_service.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -202,12 +202,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         // Call the AuthService to send password reset email
         await AuthService.forgotPassword(_emailController.text.trim());
 
-        // Show success message
-        _showSuccessSnackbar('Password reset link sent to your email');
-
         // Navigate back after showing message
         if (mounted) {
-          Future.delayed(const Duration(seconds: 2), () => Navigator.pop(context));
+          Navigator.pushNamed(
+            context,
+            '/emailverification',
+            arguments: _emailController.text.trim(),
+          );
         }
       } catch (e) {
         // Handle different types of errors

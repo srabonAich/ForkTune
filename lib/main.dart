@@ -1,10 +1,11 @@
+/*
 import 'package:flutter/material.dart';
+import 'package:my_first_app/screens/email_verification.dart';
 import 'package:my_first_app/screens/forgot_password.dart';
 import 'package:my_first_app/screens/notification_screen.dart';
 import 'package:my_first_app/screens/saved_recipe_screen.dart';
 import 'package:my_first_app/screens/signup_screen.dart';
 import 'package:my_first_app/screens/launch_screen.dart';
-import 'package:my_first_app/screens/welcome_page.dart';
 import 'package:my_first_app/screens/about_us_page.dart';
 import 'package:my_first_app/screens/profile_page.dart';
 import 'package:my_first_app/screens/EditProfilePage.dart';
@@ -29,7 +30,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
       ),
       initialRoute: '/launch',
-      routes: {''
+      routes: {
         '/launch': (context) => const LaunchScreen(),
         '/': (context) => const LoginScreen(),
         '/signup': (context) => const SignUpPage(),
@@ -43,10 +44,15 @@ class MyApp extends StatelessWidget {
         '/forgotpassword': (context) => const ForgotPasswordScreen(),
         '/notifications': (context) => const NotificationScreen(),
         '/saved-recipe': (context) => const SavedRecipesScreen(),
+        '/emailverification': (context) {
+            final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+            return EmailVerificationScreen(email: args['email'],);
+        },
       },
     );
   }
 }
+*/
 
 // dynamic for different user
 // old
@@ -151,20 +157,20 @@ class MyApp extends StatelessWidget {
     );
   }
 }
- */
+*/
 
 
 //latest
-/*
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:my_first_app/providers/user_provider.dart'; // Move UserProvider to separate file
+import 'package:my_first_app/providers/user_provider.dart';
+import 'package:my_first_app/screens/email_verification.dart'; // Make sure this import exists
 import 'package:my_first_app/screens/forgot_password.dart';
 import 'package:my_first_app/screens/notification_screen.dart';
 import 'package:my_first_app/screens/saved_recipe_screen.dart';
 import 'package:my_first_app/screens/signup_screen.dart';
 import 'package:my_first_app/screens/launch_screen.dart';
-import 'package:my_first_app/screens/welcome_page.dart';
 import 'package:my_first_app/screens/about_us_page.dart';
 import 'package:my_first_app/screens/profile_page.dart';
 import 'package:my_first_app/screens/EditProfilePage.dart';
@@ -174,7 +180,7 @@ import 'package:my_first_app/screens/recipe_screen.dart';
 import 'package:my_first_app/screens/login_screen.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // Required for shared_preferences
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
@@ -186,7 +192,7 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create: (context) => UserProvider()..loadUser(), // Auto-load user on startup
+          create: (context) => UserProvider()..loadUser(),
         ),
       ],
       child: MaterialApp(
@@ -208,26 +214,22 @@ class MyApp extends StatelessWidget {
           '/edit-profile': (context) {
             final user = Provider.of<UserProvider>(context).currentUser;
             if (user == null) {
-              // Handle case where user is not logged in
               return const Scaffold(
                 body: Center(child: Text('Please login first')),
               );
             }
-            return EditProfilePage(user: user);
+            return const EditProfilePage(); // No need to pass user now
           },
           '/about': (context) => const AboutUsPage(),
           '/forgotpassword': (context) => const ForgotPasswordScreen(),
           '/notifications': (context) => const NotificationScreen(),
           '/saved-recipe': (context) => const SavedRecipesScreen(),
-        },
-        onGenerateRoute: (settings) {
-          if (settings.name == '/welcome') {
-            return MaterialPageRoute(builder: (_) => const WelcomePage());
-          }
-          return null;
+          '/email-verification': (context) {
+            final email = ModalRoute.of(context)!.settings.arguments as String;
+            return EmailVerificationScreen(email: email);
+          },
         },
       ),
     );
   }
 }
- */
