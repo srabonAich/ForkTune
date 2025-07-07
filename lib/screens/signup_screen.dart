@@ -223,6 +223,8 @@
 
 // Dynamic sign up page with previouse design
 
+/*========latest dynamic code updated by Sagor========*/
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -476,6 +478,11 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
       );
 
       if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        // Assuming your backend sends back a "message" on successful login
+        final Token = responseData['message'];
+        // Store the JWT token securely using flutter_secure_storage
+        await _secureStorage.write(key: 'token', value: Token);
         Navigator.pushNamed(context, '/home');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(

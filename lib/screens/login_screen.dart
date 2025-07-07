@@ -120,12 +120,13 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 */
-
+/*========latest dynamic code updated by Sagor========*/
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:my_first_app/screens/signup_screen.dart';
-import 'dart:ui'; // Import to use ImageFilter
+import 'dart:ui';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -143,6 +144,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _slideAnimation;
+  final FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
   @override
   void initState() {
@@ -191,7 +193,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         if (response.statusCode == 200) {
           final responseData = json.decode(response.body);
           // Assuming your backend sends back a "message" on successful login
-          final message = responseData['message'];
+          final Token = responseData['message'];
+          // Store the JWT token securely using flutter_secure_storage
+          await _secureStorage.write(key: 'token', value: Token);
+
 
           // If login is successful, navigate to home page
           Navigator.pushNamed(context, '/home');

@@ -221,7 +221,7 @@ class MyApp extends StatelessWidget {
             return const EditProfilePage(); // No need to pass user now
           },
           '/about': (context) => const AboutUsPage(),
-          '/forgotpassword': (context) => const ForgotPasswordScreen(),
+          '/forgotpassword': (context) => const ForgotPasswordPage(),
           '/notifications': (context) => const NotificationScreen(),
           '/saved-recipe': (context) => const SavedRecipesScreen(),
           '/email-verification': (context) {
