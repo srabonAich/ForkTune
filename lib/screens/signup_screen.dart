@@ -654,7 +654,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
       children: [
         const SizedBox(height: 20),
         Image.asset(
-          'assets/verify.jpg',
+          'assets/signup.jpg',
           height: 150,
           fit: BoxFit.contain,
         ),
