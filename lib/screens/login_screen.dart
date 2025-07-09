@@ -185,7 +185,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       // Send POST request to backend
       try {
         final response = await http.post(
-          Uri.parse('http://localhost:8080/login'), // Replace with your backend URL
+          Uri.parse('http://localhost:8080/login'),
           headers: {'Content-Type': 'application/json'},
           body: json.encode({'email': email, 'password': password}),
         );

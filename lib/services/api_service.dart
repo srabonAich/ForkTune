@@ -56,7 +56,9 @@ class ApiService {
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-class AuthService {
+import '../models/recipe.dart';
+
+class ApiService {
   static const String _baseUrl = 'http://your-backend-url.com/api';
 
   static Future<Map<String, dynamic>> login(String email, String password) async {
@@ -88,5 +90,11 @@ class AuthService {
     if (response.statusCode != 200) {
       throw Exception('Failed to send password reset email');
     }
+  }
+
+  Future <void> addRecipe(Recipe recipe) async{
+    // Implement your API call to save the recipe
+    // This is a placeholder for actual implementation
+    await Future.delayed(const Duration(seconds: 1));
   }
 }

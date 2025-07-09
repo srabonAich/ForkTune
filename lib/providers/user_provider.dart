@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io';
 import 'package:path/path.dart' as path;
-import 'package:http_parser/http_parser.dart'; //for media type
+import 'package:http_parser/http_parser.dart';
 
 class UserProvider with ChangeNotifier {
   User? _currentUser;
@@ -16,7 +16,6 @@ class UserProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // Initialize with test user for development
   UserProvider() {
     if (kDebugMode) {
       _currentUser = User(
@@ -27,7 +26,25 @@ class UserProvider with ChangeNotifier {
         allergies: 'None',
         cuisinePreferences: 'Italian',
         skillLevel: 'Intermediate',
+        savedRecipes: [], // Initialize with empty list
       );
+    }
+  }
+
+  // Add this private method to handle user saving
+  Future<bool> _saveUser(User? user) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (user != null) {
+        await prefs.setString('currentUser', json.encode(user.toJson()));
+        return true;
+      }
+      return false;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error saving user: $e');
+      }
+      return false;
     }
   }
 
@@ -59,7 +76,6 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Replace with your actual API endpoint
       final response = await http.post(
         Uri.parse('https://your-api.com/auth/login'),
         headers: {'Content-Type': 'application/json'},
@@ -72,11 +88,7 @@ class UserProvider with ChangeNotifier {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         _currentUser = User.fromJson(data['user']);
-
-        // Save to shared preferences
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('currentUser', json.encode(_currentUser!.toJson()));
-
+        await _saveUser(_currentUser);
         _error = null;
       } else {
         _error = 'Invalid email or password';
@@ -97,7 +109,6 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Replace with your actual API endpoint
       final response = await http.put(
         Uri.parse('https://your-api.com/users/${updatedUser.id}'),
         headers: {'Content-Type': 'application/json'},
@@ -106,11 +117,7 @@ class UserProvider with ChangeNotifier {
 
       if (response.statusCode == 200) {
         _currentUser = updatedUser;
-
-        // Update shared preferences
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('currentUser', json.encode(_currentUser!.toJson()));
-
+        await _saveUser(_currentUser);
         _error = null;
       } else {
         _error = 'Failed to update profile';
@@ -131,10 +138,8 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Clear local storage
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('currentUser');
-
       _currentUser = null;
       _error = null;
     } catch (e) {
@@ -161,7 +166,6 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Replace with your actual API endpoint
       final response = await http.post(
         Uri.parse('https://your-api.com/auth/register'),
         headers: {'Content-Type': 'application/json'},
@@ -179,11 +183,7 @@ class UserProvider with ChangeNotifier {
       if (response.statusCode == 201) {
         final data = json.decode(response.body);
         _currentUser = User.fromJson(data['user']);
-
-        // Save to shared preferences
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('currentUser', json.encode(_currentUser!.toJson()));
-
+        await _saveUser(_currentUser);
         _error = null;
       } else {
         _error = 'Registration failed: ${response.body}';
@@ -203,12 +203,10 @@ class UserProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    try{
-      // create multipart request
+    try {
       final uri = Uri.parse('https://my-api.com/users/${_currentUser!.id}/profile-image');
       var request = http.MultipartRequest('POST', uri);
 
-      // add file to request
       final fileStream = http.ByteStream(imageFile.openRead());
       final fileLength = await imageFile.length();
       final multipartFile = http.MultipartFile(
@@ -220,42 +218,45 @@ class UserProvider with ChangeNotifier {
       );
       request.files.add(multipartFile);
 
-      //add authorization token if needed
-      // request.headers['Authorization'] = 'Bearer your_token_here';
-
-      //send request
       final response = await request.send();
       final responseData = await response.stream.bytesToString();
       final parsedResponse = json.decode(responseData);
 
-      if(response.statusCode == 200) {
+      if (response.statusCode == 200) {
         final imageUrl = parsedResponse['imageUrl'] as String;
-
-        //update local user with new img url
         _currentUser = _currentUser!.copyWith(
           profileImageUrl: imageUrl,
-          localProfileImage: null, // clear local file reference
         );
-
-        //update shared preference
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('currentUser', json.encode(_currentUser!.toJson()));
-
+        await _saveUser(_currentUser);
         _error = null;
         return imageUrl;
-      } else{
+      } else {
         throw Exception('Failed to upload image: ${parsedResponse['message'] ?? 'Unknown error'}');
       }
-    } catch(e) {
+    } catch (e) {
       _error = 'Failed to upload profile image';
-      if (kDebugMode){
+      if (kDebugMode) {
         print('Profile image upload error: $e');
       }
       rethrow;
-    } finally{
+    } finally {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  void addUserRecipe(String recipeId) {
+    if (_currentUser == null) return;
+
+    // Create a new list from the existing savedRecipes (ensure it's not null)
+    final updatedSavedRecipes = List<String>.from(_currentUser!.savedRecipes ?? []);
+    updatedSavedRecipes.add(recipeId);
+
+    _currentUser = _currentUser!.copyWith(
+      savedRecipes: updatedSavedRecipes,
+    );
+    notifyListeners();
+    _saveUser(_currentUser);
   }
 
   void clearError() {

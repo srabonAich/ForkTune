@@ -40,6 +40,8 @@ flutter:
     - assets/images/
     - assets/images/launch_image.png
     - assets/images/leaf1.png
+    - assets/images/leaf2.png
+    - assets/images/leaf3.png
     - assets/images/cloud1.png
     - assets/images/cabbage.png
     - assets/images/cauliflower.png

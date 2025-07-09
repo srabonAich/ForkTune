@@ -163,6 +163,7 @@ class MyApp extends StatelessWidget {
 //latest
 
 import 'package:flutter/material.dart';
+import 'package:my_first_app/screens/add_recipe_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:my_first_app/providers/user_provider.dart';
 import 'package:my_first_app/screens/email_verification.dart'; // Make sure this import exists
@@ -228,6 +229,7 @@ class MyApp extends StatelessWidget {
             final email = ModalRoute.of(context)!.settings.arguments as String;
             return EmailVerificationScreen(email: email);
           },
+          '/add-recipe' : (context) => const AddRecipeScreen(),
         },
       ),
     );
