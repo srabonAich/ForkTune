@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:my_first_app/screens/add_recipe_screen.dart';
+import 'package:ForkTune/screens/add_recipe_screen.dart';
 
 class MealPlanningPage extends StatefulWidget {
   const MealPlanningPage({super.key});

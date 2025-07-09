@@ -869,8 +869,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:provider/provider.dart';
-import 'package:my_first_app/models/User.dart';
-import 'package:my_first_app/providers/user_provider.dart';
+import 'package:ForkTune/models/User.dart';
+import 'package:ForkTune/providers/user_provider.dart';
 import 'package:image_picker/image_picker.dart';
 
 class EditProfilePage extends StatefulWidget {

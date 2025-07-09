@@ -163,26 +163,30 @@ class MyApp extends StatelessWidget {
 //latest
 
 import 'package:flutter/material.dart';
-import 'package:my_first_app/screens/add_recipe_screen.dart';
+import 'package:ForkTune/screens/add_recipe_screen.dart';
 import 'package:provider/provider.dart';
-import 'package:my_first_app/providers/user_provider.dart';
-import 'package:my_first_app/screens/email_verification.dart'; // Make sure this import exists
-import 'package:my_first_app/screens/forgot_password.dart';
-import 'package:my_first_app/screens/notification_screen.dart';
-import 'package:my_first_app/screens/saved_recipe_screen.dart';
-import 'package:my_first_app/screens/signup_screen.dart';
-import 'package:my_first_app/screens/launch_screen.dart';
-import 'package:my_first_app/screens/about_us_page.dart';
-import 'package:my_first_app/screens/profile_page.dart';
-import 'package:my_first_app/screens/EditProfilePage.dart';
-import 'package:my_first_app/screens/home_page.dart';
-import 'package:my_first_app/screens/meal_planner_page.dart';
-import 'package:my_first_app/screens/recipe_screen.dart';
-import 'package:my_first_app/screens/login_screen.dart';
+import 'package:ForkTune/providers/user_provider.dart';
+import 'package:ForkTune/screens/email_verification.dart'; // Make sure this import exists
+import 'package:ForkTune/screens/forgot_password.dart';
+import 'package:ForkTune/screens/notification_screen.dart';
+import 'package:ForkTune/screens/saved_recipe_screen.dart';
+import 'package:ForkTune/screens/signup_screen.dart';
+import 'package:ForkTune/screens/launch_screen.dart';
+import 'package:ForkTune/screens/about_us_page.dart';
+import 'package:ForkTune/screens/profile_page.dart';
+import 'package:ForkTune/screens/EditProfilePage.dart';
+import 'package:ForkTune/screens/home_page.dart';
+import 'package:ForkTune/screens/meal_planner_page.dart';
+import 'package:ForkTune/screens/recipe_screen.dart';
+import 'package:ForkTune/screens/login_screen.dart';
+import 'package:window_size/window_size.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
+  setWindowTitle('Forktune');
+  setWindowMinSize(Size(430, 830)); // Set desired min window size
+  setWindowMaxSize(Size(430, 830));
 }
 
 class MyApp extends StatelessWidget {

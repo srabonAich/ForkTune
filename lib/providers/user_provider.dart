@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:my_first_app/models/User.dart';
+import 'package:ForkTune/models/User.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -7,14 +7,20 @@ import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:http_parser/http_parser.dart';
 
+import '../models/recipe.dart';
+
 class UserProvider with ChangeNotifier {
   User? _currentUser;
   bool _isLoading = false;
   String? _error;
+  List<Recipe> _savedRecipes = [];
+
 
   User? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  List<Recipe> get savedRecipes => _savedRecipes;
+
 
   UserProvider() {
     if (kDebugMode) {
@@ -28,6 +34,74 @@ class UserProvider with ChangeNotifier {
         skillLevel: 'Intermediate',
         savedRecipes: [], // Initialize with empty list
       );
+    }
+  }
+
+  Future<void> loadSavedRecipes() async {
+    if (_currentUser == null) return;
+
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final response = await http.get(
+        Uri.parse('https://your-api.com/users/${_currentUser!.id}/saved-recipes'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        _savedRecipes = data.map((recipe) => Recipe.fromJson(recipe)).toList();
+        _error = null;
+      } else {
+        _error = 'Failed to load saved recipes';
+      }
+    } catch (e) {
+      _error = 'Error loading saved recipes';
+      if (kDebugMode) {
+        print('Error loading saved recipes: $e');
+      }
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> removeSavedRecipe(String recipeId) async {
+    if (_currentUser == null) return false;
+
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final response = await http.delete(
+        Uri.parse('https://your-api.com/users/${_currentUser!.id}/saved-recipes/$recipeId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        // Remove from local list
+        _savedRecipes.removeWhere((recipe) => recipe.id == recipeId);
+        // Update user's saved recipes list
+        _currentUser = _currentUser!.copyWith(
+          savedRecipes: _currentUser!.savedRecipes?.where((id) => id != recipeId).toList(),
+        );
+        await _saveUser(_currentUser);
+        _error = null;
+        return true;
+      } else {
+        _error = 'Failed to remove recipe';
+        return false;
+      }
+    } catch (e) {
+      _error = 'Error removing recipe';
+      if (kDebugMode) {
+        print('Error removing saved recipe: $e');
+      }
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 

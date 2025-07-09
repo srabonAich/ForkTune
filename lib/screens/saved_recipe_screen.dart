@@ -1,4 +1,231 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:ForkTune/models/recipe.dart';
+import 'package:ForkTune/providers/user_provider.dart';
+import 'package:ForkTune/services/api_service.dart';
+
+class SavedRecipesScreen extends StatefulWidget {
+  const SavedRecipesScreen({super.key});
+
+  @override
+  State<SavedRecipesScreen> createState() => _SavedRecipesScreenState();
+}
+
+class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
+  bool _isLoading = false;
+  List<Recipe> _savedRecipes = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedRecipes();
+  }
+
+  Future<void> _loadSavedRecipes() async {
+    if (!mounted) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      await userProvider.loadSavedRecipes();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load saved recipes: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _removeRecipe(String recipeId) async {
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final success = await userProvider.removeSavedRecipe(recipeId);
+
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Recipe removed from saved')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to remove recipe: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Saved Recipes'),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _savedRecipes.isEmpty
+          ? const Center(
+        child: Text(
+          'No saved recipes yet',
+          style: TextStyle(fontSize: 16, color: Colors.grey),
+        ),
+      )
+          : Padding(
+        padding: const EdgeInsets.all(16),
+        child: RefreshIndicator(
+          onRefresh: _loadSavedRecipes,
+          child: GridView.builder(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 0.65,
+            ),
+            itemCount: _savedRecipes.length,
+            itemBuilder: (context, index) {
+              final recipe = _savedRecipes[index];
+              return _buildSavedRecipeCard(context, recipe);
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSavedRecipeCard(BuildContext context, Recipe recipe) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(
+          context,
+          '/recipe',
+          arguments: recipe.id, // Pass recipe ID to details screen
+        );
+      },
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
+              child: recipe.image.isNotEmpty
+                  ? Image.network(
+                recipe.image,
+                height: 90,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  height: 90,
+                  color: Colors.grey[200],
+                  child: const Icon(Icons.fastfood, size: 40),
+                ),
+              )
+                  : Container(
+                height: 90,
+                color: Colors.grey[200],
+                child: const Icon(Icons.fastfood, size: 40),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    recipe.title,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.access_time,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${recipe.prepTime + recipe.cookTime} mins',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const Spacer(),
+                      const Icon(
+                        Icons.star,
+                        size: 16,
+                        color: Colors.amber,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        recipe.rating.toStringAsFixed(1),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () => _removeRecipe(recipe.id),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        side: const BorderSide(color: Colors.red),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        'Remove',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+
+
+/*
+
+import 'package:flutter/material.dart';
 
 class SavedRecipesScreen extends StatelessWidget {
   const SavedRecipesScreen({super.key});
@@ -190,3 +417,5 @@ class SavedRecipesScreen extends StatelessWidget {
     },
   ];
 }
+
+*/
