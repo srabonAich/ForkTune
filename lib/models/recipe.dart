@@ -11,8 +11,10 @@ class Recipe {
   final String protein;
   final String fat;
   final String carbs;
-  final List<List<String>> ingredients;
+  final List<List<String>> ingredients; // [["ingredient", "quantity"], ...]
   final List<String> instructions;
+  final String? category;
+  final String type;
 
   Recipe({
     required this.id,
@@ -29,6 +31,8 @@ class Recipe {
     required this.carbs,
     required this.ingredients,
     required this.instructions,
+    this.category,
+    required this.type,
   });
 
   factory Recipe.fromJson(Map<String, dynamic> json) {
@@ -52,6 +56,8 @@ class Recipe {
       instructions: json['instructions'] != null
           ? List<String>.from(json['instructions'])
           : [],
+      category: json['category'],
+      type: json['mealType'] ?? 'Other',
     );
   }
 
@@ -71,6 +77,9 @@ class Recipe {
       'carbs': carbs,
       'ingredients': ingredients,
       'instructions': instructions,
+      if (category != null) 'category': category,
     };
   }
+
+  int get totalTime => prepTime + cookTime;
 }

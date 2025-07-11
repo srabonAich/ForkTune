@@ -166,7 +166,7 @@ import 'package:flutter/material.dart';
 import 'package:ForkTune/screens/add_recipe_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:ForkTune/providers/user_provider.dart';
-import 'package:ForkTune/screens/email_verification.dart'; // Make sure this import exists
+import 'package:ForkTune/screens/email_verification.dart';
 import 'package:ForkTune/screens/forgot_password.dart';
 import 'package:ForkTune/screens/notification_screen.dart';
 import 'package:ForkTune/screens/saved_recipe_screen.dart';
@@ -233,7 +233,9 @@ class MyApp extends StatelessWidget {
             final email = ModalRoute.of(context)!.settings.arguments as String;
             return EmailVerificationScreen(email: email);
           },
-          '/add-recipe' : (context) => const AddRecipeScreen(),
+          '/add-recipe': (context) => AddRecipeScreen(
+            selectedDate: DateTime.now(),
+          ),
         },
       ),
     );

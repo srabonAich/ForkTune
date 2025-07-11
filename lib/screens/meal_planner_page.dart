@@ -1,5 +1,400 @@
-//new
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:ForkTune/models/recipe.dart';
+import 'package:ForkTune/screens/add_recipe_screen.dart';
+import 'package:ForkTune/services/api_service.dart';
 
+class MealPlanningPage extends StatefulWidget {
+  const MealPlanningPage({super.key});
+
+  @override
+  State<MealPlanningPage> createState() => _MealPlanningPageState();
+}
+
+class _MealPlanningPageState extends State<MealPlanningPage> {
+  DateTime _selectedDate = DateTime.now();
+  DateTime _currentMonth = DateTime.now();
+  final Color primaryColor = const Color(0xFF7F56D9);
+  bool _isLoading = false;
+  List<Recipe> _recipes = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMealPlan();
+  }
+
+  Future<void> _loadMealPlan() async {
+    setState(() => _isLoading = true);
+    try {
+      final apiService = Provider.of<ApiService>(context, listen: false);
+      final mealPlan = await apiService.getMealPlan(_selectedDate);
+
+      final recipeIds = mealPlan['meals'].values.whereType<String>().toList();
+      _recipes = await _fetchRecipes(recipeIds);
+
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading meal plan: $e')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<List<Recipe>> _fetchRecipes(List<String> recipeIds) async {
+    final apiService = Provider.of<ApiService>(context, listen: false);
+    final List<Recipe> recipes = [];
+
+    for (final id in recipeIds) {
+      try {
+        final recipe = await apiService.getRecipesByCategory('').then(
+              (allRecipes) => allRecipes.firstWhere((r) => r.id == id),
+        );
+        recipes.add(recipe);
+      } catch (e) {
+        debugPrint('Error loading recipe $id: $e');
+      }
+    }
+    return recipes;
+  }
+
+  Future<void> _addRecipe(Recipe newRecipe) async {
+    setState(() => _isLoading = true);
+    try {
+      final apiService = Provider.of<ApiService>(context, listen: false);
+
+      final savedRecipe = await apiService.addRecipe(newRecipe);
+
+      final mealPlan = await apiService.getMealPlan(_selectedDate);
+
+      mealPlan['meals'][savedRecipe.type.toLowerCase()] = savedRecipe.id;
+
+      await apiService.saveMealPlan(_selectedDate, mealPlan);
+
+      await _loadMealPlan();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error saving recipe: $e')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final String formattedDate = DateFormat('EEEE, MMMM d').format(_selectedDate);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Meal Planner',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.today),
+            onPressed: () {
+              setState(() {
+                _selectedDate = DateTime.now();
+                _currentMonth = DateTime.now();
+                _loadMealPlan();
+              });
+            },
+          ),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+        children: [
+          // Calendar Section
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                // Month navigation and calendar grid
+                // ... (keep your existing calendar implementation)
+                _buildCalendarGrid(),
+              ],
+            ),
+          ),
+
+          // Meals List Section
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    formattedDate,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Display meals
+                  if (_recipes.isEmpty)
+                    const Center(child: Text('No meals planned for this day'))
+                  else
+                    ..._recipes.map((recipe) => Column(
+                      children: [
+                        _buildMealCard(
+                          context,
+                          recipe.type,
+                          recipe.title,
+                          recipe.image,
+                          '12:00 PM',
+                          recipe.calories,
+                          primaryColor,
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                    )).toList(),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final newRecipe = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AddRecipeScreen(
+                selectedDate: _selectedDate,
+              ),
+            ),
+          );
+
+          if (newRecipe != null && newRecipe is Recipe) {
+            await _addRecipe(newRecipe);
+          }
+        },
+        backgroundColor: primaryColor,
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: 1,
+        selectedItemColor: primaryColor,
+        unselectedItemColor: Colors.grey,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today_outlined),
+            activeIcon: Icon(Icons.calendar_today),
+            label: 'Plan',
+          ),
+        ],
+        onTap: (index) {
+          if (index == 0) {
+            Navigator.pushNamed(context, '/home');
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildCalendarGrid() {
+    final firstDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month, 1);
+    final lastDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
+    final daysInMonth = lastDayOfMonth.day;
+    final startingWeekday = firstDayOfMonth.weekday;
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 7,
+        childAspectRatio: 1,
+      ),
+      itemCount: 6 * 7, // Always show 6 rows for consistent height
+      itemBuilder: (context, index) {
+        final day = index - startingWeekday + 1;
+        final isCurrentMonth = day > 0 && day <= daysInMonth;
+        final date = isCurrentMonth
+            ? DateTime(_currentMonth.year, _currentMonth.month, day)
+            : null;
+        final isSelected = date != null && _isSameDay(date, _selectedDate);
+        final isToday = date != null && _isSameDay(date, DateTime.now());
+
+        return GestureDetector(
+          onTap: isCurrentMonth
+              ? () {
+            setState(() {
+              _selectedDate = date!;
+            });
+          }
+              : null,
+          child: Container(
+            margin: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              color: isSelected ? primaryColor : Colors.transparent,
+              shape: BoxShape.circle,
+              border: isToday
+                  ? Border.all(
+                color: isSelected ? Colors.white : primaryColor,
+                width: 2,
+              )
+                  : null,
+            ),
+            child: Center(
+              child: Text(
+                isCurrentMonth ? day.toString() : '',
+                style: TextStyle(
+                  color: isSelected
+                      ? Colors.white
+                      : isCurrentMonth
+                      ? Colors.black
+                      : Colors.grey[300],
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMealCard(
+      BuildContext context,
+      String mealType,
+      String recipeTitle,
+      String imagePath,
+      String time,
+      String calories,
+      Color primaryColor,
+      ) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          // Navigate to recipe details
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.grey.shade200,
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.asset(
+                    imagePath,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      mealType.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      recipeTitle,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time,
+                          size: 14,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          time,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Icon(
+                          Icons.local_fire_department,
+                          size: 14,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          calories,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                color: Colors.grey[400],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  bool _isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+        date1.month == date2.month &&
+        date1.day == date2.day;
+  }
+}
+
+
+
+//new
+/*
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:ForkTune/screens/add_recipe_screen.dart';
@@ -384,6 +779,8 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
         date1.day == date2.day;
   }
 }
+
+*/
 
 
 //old
