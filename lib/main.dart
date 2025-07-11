@@ -180,7 +180,7 @@ import 'package:ForkTune/screens/meal_planner_page.dart';
 import 'package:ForkTune/screens/recipe_screen.dart';
 import 'package:ForkTune/screens/login_screen.dart';
 import 'package:window_size/window_size.dart';
-
+// 15, 32, 45, 80
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
