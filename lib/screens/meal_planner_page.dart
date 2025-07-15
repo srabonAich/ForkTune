@@ -28,6 +28,8 @@ class Recipe {
   final int carbs;
   final List<Map<String, String>> ingredients;
   final List<String> instructions;
+  final Map<String, dynamic>? preferences;
+  final int? flag;
 
   Recipe({
     required this.id,
@@ -44,6 +46,8 @@ class Recipe {
     required this.carbs,
     required this.ingredients,
     required this.instructions,
+    this.preferences,
+    this.flag,
   });
 
   factory Recipe.fromJson(Map<String, dynamic> json) {
@@ -59,6 +63,7 @@ class Recipe {
       calories: json['calories'] is int ? json['calories'] : int.tryParse(json['calories'].toString()) ?? 0,
       protein: json['protein'] is int ? json['protein'] : int.tryParse(json['protein'].toString()) ?? 0,
       fat: json['fat'] is int ? json['fat'] : int.tryParse(json['fat'].toString()) ?? 0,
+      flag: json['flag'] is int ? json['flag'] : int.tryParse(json['flag'].toString()) ?? 0,
       carbs: json['carbs'] is int ? json['carbs'] : int.tryParse(json['carbs'].toString()) ?? 0,
       ingredients: List<Map<String, String>>.from(
         (json['ingredients'] as List?)?.map((ing) => {
@@ -69,19 +74,24 @@ class Recipe {
       instructions: List<String>.from(
         (json['instructions'] as List?)?.map((inst) => inst.toString()) ?? [],
       ),
+      preferences: json['preferences'] != null
+          ? Map<String, dynamic>.from(json['preferences'])
+          : null,
     );
   }
 
   String get imageUrl => imageId != null
       ? 'http://localhost:8080/recipes/image/$imageId'
       : 'assets/images/default_recipe.jpg';
+
+  bool get isPublished => flag == 1;
 }
 
 class _MealPlanningPageState extends State<MealPlanningPage> {
-  DateTime _selectedDate = DateTime.now();
-  DateTime _currentMonth = DateTime.now();
   final Color primaryColor = const Color(0xFF7F56D9);
   final Color secondaryColor = const Color(0xFFF4EBFF);
+  final Color publishedColor = Colors.green;
+  final Color unpublishedColor = Colors.orange;
   bool _isLoading = false;
   List<Recipe> _recipes = [];
   final _secureStorage = const FlutterSecureStorage();
@@ -133,13 +143,7 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
           final List<dynamic> data = json.decode(response.body);
           if (mounted) {
             setState(() {
-              _recipes = data.map((json) => Recipe.fromJson(json)).where((recipe) {
-                try {
-                  return _isSameDay(DateTime.parse(recipe.date), _selectedDate);
-                } catch (e) {
-                  return false;
-                }
-              }).toList();
+              _recipes = data.map((json) => Recipe.fromJson(json)).toList();
             });
           }
         } catch (e) {
@@ -155,7 +159,7 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
             _recipes = [];
           });
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('No recipes found for selected date')),
+            SnackBar(content: Text('No recipes found')),
           );
         }
       }
@@ -184,7 +188,7 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-          body: json.encode({'id':recipeId,}),
+        body: json.encode({'id': recipeId}),
       );
 
       if (response.statusCode == 200) {
@@ -201,6 +205,115 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error deleting recipe: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  Future<void> _addPreferences(String recipeId) async {
+    // Find the recipe to get existing preferences
+    final recipe = _recipes.firstWhere((r) => r.id == recipeId);
+    final existingPreferences = recipe.preferences ?? {};
+
+    final dietaryRestrictions = await showDialog<List<String>>(
+      context: context,
+      builder: (context) => MultiSelectDialog(
+        title: 'Dietary Restrictions',
+        options: const [
+          'Vegetarian',
+          'Vegan',
+          'Gluten-Free',
+          'Dairy-Free',
+          'Nut-Free',
+          'Halal',
+          'Kosher',
+          'Diabetic-Friendly'
+        ],
+        initialSelected: existingPreferences['dietaryRestrictions'] != null
+            ? List<String>.from(existingPreferences['dietaryRestrictions'])
+            : [],
+      ),
+    );
+
+    if (dietaryRestrictions == null) return;
+
+    final cuisinePreferences = await showDialog<List<String>>(
+      context: context,
+      builder: (context) => MultiSelectDialog(
+        title: 'Cuisine Preferences',
+        options: const [
+          'Italian',
+          'Indian',
+          'Chinese',
+          'Mexican',
+          'Mediterranean',
+          'Japanese',
+          'Thai',
+          'American'
+        ],
+        initialSelected: existingPreferences['cuisinePreferences'] != null
+            ? List<String>.from(existingPreferences['cuisinePreferences'])
+            : [],
+      ),
+    );
+
+    if (cuisinePreferences == null) return;
+
+    final diabeticFriendly = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Diabetic Friendly'),
+        content: const Text('Is this recipe suitable for diabetics?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Yes'),
+          ),
+        ],
+      ),
+    ) ?? existingPreferences['diabeticFriendly'] ?? false;
+
+    try {
+      final token = await _secureStorage.read(key: 'token');
+      if (token == null) {
+        if (mounted) Navigator.pushReplacementNamed(context, '/login');
+        return;
+      }
+
+      final response = await http.post(
+        Uri.parse('http://localhost:8080/recipes/add-preferences'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'recipeId': recipeId,
+          'preferences': {
+            'dietaryRestrictions': dietaryRestrictions,
+            'cuisinePreferences': cuisinePreferences,
+            'diabeticFriendly': diabeticFriendly,
+          },
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Preferences added successfully')),
+          );
+          _loadUserRecipes();
+        }
+      } else {
+        throw Exception('Failed to add preferences: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error adding preferences: ${e.toString()}')),
         );
       }
     }
@@ -244,20 +357,10 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Meal Planner',
+        title: const Text('My Recipes',
             style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.today),
-            onPressed: () {
-              setState(() {
-                _selectedDate = DateTime.now();
-                _currentMonth = DateTime.now();
-                _loadUserRecipes();
-              });
-            },
-          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadUserRecipes,
@@ -266,31 +369,23 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-        children: [
-          _buildCalendarHeader(),
-          _buildCalendarGrid(),
-          Expanded(
-            child: _recipes.isEmpty
-                ? _buildEmptyState()
-                : RefreshIndicator(
-              onRefresh: _loadUserRecipes,
-              child: ListView.builder(
-                controller: _scrollController,
-                itemCount: _recipes.length,
-                itemBuilder: (context, index) =>
-                    _buildRecipeCard(_recipes[index]),
-              ),
-            ),
-          ),
-        ],
+          : _recipes.isEmpty
+          ? _buildEmptyState()
+          : RefreshIndicator(
+        onRefresh: _loadUserRecipes,
+        child: ListView.builder(
+          controller: _scrollController,
+          itemCount: _recipes.length,
+          itemBuilder: (context, index) =>
+              _buildRecipeCard(_recipes[index]),
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => AddRecipeScreen(selectedDate: _selectedDate),
+              builder: (context) => AddRecipeScreen(selectedDate: DateTime.now()),
             ),
           );
           await _loadUserRecipes();
@@ -298,149 +393,6 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
         backgroundColor: primaryColor,
         child: const Icon(Icons.add, color: Colors.white),
       ),
-    );
-  }
-
-  Widget _buildCalendarHeader() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          _buildMonthNavigation(),
-          const SizedBox(height: 8),
-          _buildWeekdaysHeader(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMonthNavigation() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        IconButton(
-          icon: const Icon(Icons.chevron_left),
-          onPressed: () {
-            setState(() {
-              _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1);
-              _loadUserRecipes();
-            });
-          },
-        ),
-        Text(
-          DateFormat('MMMM yyyy').format(_currentMonth),
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-        IconButton(
-          icon: const Icon(Icons.chevron_right),
-          onPressed: () {
-            setState(() {
-              _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1);
-              _loadUserRecipes();
-            });
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildWeekdaysHeader() {
-    const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    return Row(
-      children: weekdays.map((day) => Expanded(
-        child: Center(
-          child: Text(
-            day,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-          ),
-        ),
-      )).toList(),
-    );
-  }
-
-  Widget _buildCalendarGrid() {
-    final firstDay = DateTime(_currentMonth.year, _currentMonth.month, 1);
-    final lastDay = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
-    final startingWeekday = firstDay.weekday;
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 7,
-        childAspectRatio: 1,
-      ),
-      itemCount: 42, // 6 weeks
-      itemBuilder: (context, index) {
-        final day = index - startingWeekday + 1;
-        final isCurrentMonth = day > 0 && day <= lastDay.day;
-        final date = isCurrentMonth
-            ? DateTime(_currentMonth.year, _currentMonth.month, day)
-            : null;
-        final isSelected = date != null && _isSameDay(date, _selectedDate);
-        final isToday = date != null && _isSameDay(date, DateTime.now());
-        final hasRecipes = date != null && _recipes.any((r) =>
-            _isSameDay(DateTime.parse(r.date), date));
-
-        return GestureDetector(
-          onTap: isCurrentMonth ? () {
-            setState(() {
-              _selectedDate = date!;
-              _loadUserRecipes();
-            });
-          } : null,
-          child: Container(
-            margin: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              color: isSelected ? primaryColor : null,
-              shape: BoxShape.circle,
-              border: isToday
-                  ? Border.all(
-                color: isSelected ? Colors.white : primaryColor,
-                width: 2,
-              )
-                  : null,
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Text(
-                  isCurrentMonth ? day.toString() : '',
-                  style: TextStyle(
-                    color: isSelected
-                        ? Colors.white
-                        : isCurrentMonth
-                        ? Colors.black
-                        : Colors.grey[300],
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
-                if (hasRecipes) Positioned(
-                  bottom: 4,
-                  child: Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: isSelected ? Colors.white : primaryColor,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -461,11 +413,9 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Meal type and title
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Image
                   Container(
                     width: 100,
                     height: 100,
@@ -491,7 +441,6 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Meal type and time
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -521,18 +470,43 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
                           ],
                         ),
                         const SizedBox(height: 8),
-
-                        // Title
-                        Text(
-                          recipe.title,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                recipe.title,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: recipe.isPublished
+                                    ? publishedColor.withOpacity(0.2)
+                                    : unpublishedColor.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                recipe.isPublished ? 'Published' : 'Draft',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: recipe.isPublished
+                                      ? publishedColor
+                                      : unpublishedColor,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 8),
-
-                        // Description
                         if (recipe.description.isNotEmpty)
                           Text(
                             recipe.description,
@@ -548,15 +522,9 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
                   ),
                 ],
               ),
-
               const SizedBox(height: 16),
-
-              // Nutrition info
               _buildNutritionInfo(recipe),
-
               const SizedBox(height: 16),
-
-              // Ingredients preview
               if (recipe.ingredients.isNotEmpty) ...[
                 const Text(
                   'Ingredients:',
@@ -591,13 +559,14 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
                     ),
                   ),
               ],
-
               const SizedBox(height: 8),
-
-              // Action buttons
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
+                  IconButton(
+                    icon: const Icon(Icons.favorite_border, color: Colors.pink),
+                    onPressed: () => _addPreferences(recipe.id),
+                  ),
                   IconButton(
                     icon: Icon(Icons.edit, color: primaryColor),
                     onPressed: () async {
@@ -670,7 +639,7 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
           ),
           const SizedBox(height: 16),
           Text(
-            'No recipes for ${DateFormat('MMMM d, yyyy').format(_selectedDate)}',
+            'No recipes found',
             style: TextStyle(
               fontSize: 18,
               color: Colors.grey[600],
@@ -727,8 +696,6 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
                     ),
                   ),
                 ),
-
-                // Recipe header
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -757,21 +724,46 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: secondaryColor,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              recipe.mealType.toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: primaryColor,
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: secondaryColor,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  recipe.mealType.toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: primaryColor,
+                                  ),
+                                ),
                               ),
-                            ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: recipe.isPublished
+                                      ? publishedColor.withOpacity(0.2)
+                                      : unpublishedColor.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  recipe.isPublished ? 'Published' : 'Draft',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: recipe.isPublished
+                                        ? publishedColor
+                                        : unpublishedColor,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 8),
                           Text(
@@ -794,16 +786,28 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 24),
-
-                // Action buttons
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     ElevatedButton.icon(
+                      icon: const Icon(Icons.favorite_border, size: 18),
+                      label: const Text('Add Preferences'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.pink.shade50,
+                        foregroundColor: Colors.pink,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                      ),
+                      onPressed: () => _addPreferences(recipe.id),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
                       icon: const Icon(Icons.edit, size: 18),
-                      label: const Text('Edit'),
+                      label: const Text(''),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
                         foregroundColor: Colors.white,
@@ -811,7 +815,7 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
+                            horizontal: 8, vertical: 12),
                       ),
                       onPressed: () async {
                         Navigator.pop(context);
@@ -827,7 +831,7 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
                     const SizedBox(width: 12),
                     ElevatedButton.icon(
                       icon: const Icon(Icons.delete, size: 18),
-                      label: const Text('Delete'),
+                      label: const Text(''),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red.shade50,
                         foregroundColor: Colors.red,
@@ -835,7 +839,7 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
+                            horizontal: 8, vertical: 12),
                       ),
                       onPressed: () {
                         Navigator.pop(context);
@@ -844,10 +848,7 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 24),
-
-                // Description
                 if (recipe.description.isNotEmpty) ...[
                   const Text(
                     'Description',
@@ -866,13 +867,8 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
                   ),
                   const SizedBox(height: 24),
                 ],
-
-                // Nutrition info
                 _buildDetailedNutritionInfo(recipe),
-
                 const SizedBox(height: 24),
-
-                // Ingredients
                 const Text(
                   'Ingredients',
                   style: TextStyle(
@@ -906,10 +902,7 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
                     ],
                   ),
                 )),
-
                 const SizedBox(height: 24),
-
-                // Instructions
                 const Text(
                   'Instructions',
                   style: TextStyle(
@@ -950,7 +943,6 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
                     ],
                   ),
                 )),
-
                 const SizedBox(height: 32),
               ],
             ),
@@ -1048,8 +1040,66 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
       ],
     );
   }
+}
 
-  bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
+class MultiSelectDialog extends StatefulWidget {
+  final String title;
+  final List<String> options;
+  final List<String> initialSelected;
+
+  const MultiSelectDialog({
+    required this.title,
+    required this.options,
+    this.initialSelected = const [],
+    super.key,
+  });
+
+  @override
+  State<MultiSelectDialog> createState() => _MultiSelectDialogState();
+}
+
+class _MultiSelectDialogState extends State<MultiSelectDialog> {
+  late List<String> selectedOptions;
+
+  @override
+  void initState() {
+    super.initState();
+    selectedOptions = List.from(widget.initialSelected);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: SingleChildScrollView(
+        child: Column(
+          children: widget.options.map((option) {
+            return CheckboxListTile(
+              title: Text(option),
+              value: selectedOptions.contains(option),
+              onChanged: (bool? value) {
+                setState(() {
+                  if (value == true) {
+                    selectedOptions.add(option);
+                  } else {
+                    selectedOptions.remove(option);
+                  }
+                });
+              },
+            );
+          }).toList(),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, selectedOptions),
+          child: const Text('Save'),
+        ),
+      ],
+    );
   }
 }

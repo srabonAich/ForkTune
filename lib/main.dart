@@ -215,7 +215,7 @@ class MyApp extends StatelessWidget {
           '/home': (context) => const HomePage(),
           '/profile': (context) => const ProfilePage(),
           '/meal-planning': (context) => const MealPlanningPage(),
-          '/recipe': (context) => const RecipeScreen(),
+          // '/recipe': (context) => const RecipeScreen(),
           '/edit-profile': (context) {
             final user = Provider.of<UserProvider>(context).currentUser;
             if (user == null) {

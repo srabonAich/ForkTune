@@ -1,5 +1,3 @@
-/*========latest dynamic code updated by Sagor========*/
-
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
@@ -7,7 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
-import 'package:mime/mime.dart'; // For MIME type detection
+import 'package:mime/mime.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -29,10 +27,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final TextEditingController _dobController = TextEditingController();
 
   final List<String> _genderOptions = ['Male', 'Female', 'Other', 'Prefer not to say'];
-  final List<String> _dietOptions = ['None', 'Vegetarian', 'Vegan', 'Pescatarian', 'Gluten-free', 'Keto', 'Halal', 'Kosher'];
-  final List<String> _allergyOptions = ['None', 'Peanuts', 'Tree nuts', 'Dairy', 'Egg', 'Wheat', 'Soy', 'Fish', 'Shellfish'];
-  final List<String> _cuisineOptions = ['None', 'American', 'Italian', 'Mexican', 'Chinese', 'Japanese', 'Indian', 'Thai', 'Mediterranean', 'French'];
-  final List<String> _skillOptions = ['Beginner', 'Intermediate', 'Advanced', 'Professional'];
+  final List<String> _dietOptions = ['Vegetarian', 'Vegan', 'Pescatarian', 'Gluten-free', 'Keto', 'Halal', 'Kosher'];
+  final List<String> _allergyOptions = ['Peanuts', 'Tree nuts', 'Dairy', 'Egg', 'Wheat', 'Soy', 'Fish', 'Shellfish'];
+  final List<String> _cuisineOptions = ['American', 'Italian', 'Mexican', 'Chinese', 'Japanese', 'Indian', 'Thai', 'Mediterranean', 'French'];
 
   @override
   void initState() {
@@ -82,7 +79,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
-  // Method to change profile picture
   Future<void> _changeProfilePicture() async {
     try {
       final picker = ImagePicker();
@@ -106,7 +102,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
-  // Method to select date of birth
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -124,7 +119,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
-  // Method to update user details only when Save button is clicked
   Future<void> _updateUserDetails() async {
     setState(() => _isSavingDetails = true);
 
@@ -139,10 +133,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
         List<int> imageBytes = await _selectedImage!.readAsBytes();
         base64Image = base64Encode(imageBytes);
 
-        mimeType = lookupMimeType(_selectedImage!.path); // Example: "image/png", "image/jpeg"
+        mimeType = lookupMimeType(_selectedImage!.path);
 
         if (mimeType != null) {
-          base64Image = 'data:$mimeType;base64,' + base64Image; // Dynamically prepend MIME type
+          base64Image = 'data:$mimeType;base64,' + base64Image;
         } else {
           throw Exception("Unable to determine MIME type for the image.");
         }
@@ -187,7 +181,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
-  // Method to update preferences
   Future<void> _updateUserPreferences() async {
     setState(() => _isSavingPreferences = true);
 
@@ -202,10 +195,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
           'Content-Type': 'application/json',
         },
         body: json.encode({
-          'dietaryRestrictions': _currentUserPreferences.dietaryRestrictions ?? 'None',
-          'allergies': _currentUserPreferences.allergies ?? 'None',
-          'cuisinePreferences': _currentUserPreferences.cuisinePreferences ?? 'None',
-          'skillLevel': _currentUserPreferences.skillLevel ?? 'Beginner',
+          'dietaryRestrictions': _currentUserPreferences.dietaryRestrictions ?? [],
+          'allergies': _currentUserPreferences.allergies ?? [],
+          'cuisinePreferences': _currentUserPreferences.cuisinePreferences ?? [],
+          'diabeticFriendly': _currentUserPreferences.diabeticFriendly ?? false,
         }),
       );
 
@@ -232,6 +225,44 @@ class _EditProfilePageState extends State<EditProfilePage> {
         setState(() => _isSavingPreferences = false);
       }
     }
+  }
+
+  Future<List<String>> _showMultiSelectDialog({
+    required BuildContext context,
+    required String title,
+    required List<String> options,
+    required List<String> initialSelections,
+  }) async {
+    final selected = await showDialog<List<String>>(
+      context: context,
+      builder: (context) => MultiSelectDialog(
+        title: title,
+        options: options,
+        initialSelections: initialSelections,
+      ),
+    );
+    return selected ?? initialSelections;
+  }
+
+  Future<bool> _showDiabeticDialog(BuildContext context, bool initialValue) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Diabetic Friendly'),
+        content: const Text('Is this user diabetic-friendly?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Yes'),
+          ),
+        ],
+      ),
+    );
+    return result ?? initialValue;
   }
 
   @override
@@ -262,7 +293,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // Profile Picture Section
             Center(
               child: Stack(
                 children: [
@@ -328,7 +358,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
             ),
             const SizedBox(height: 24),
 
-            // User Details Section
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -382,7 +411,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
             ),
             const SizedBox(height: 24),
 
-            // Preferences Section
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -408,74 +436,90 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _buildPreferenceDropdown(
+                  _buildMultiSelectPreference(
                     icon: Icons.restaurant,
                     title: 'Dietary Restrictions',
-                    value: _currentUserPreferences.dietaryRestrictions ?? 'None',
+                    selectedItems: _currentUserPreferences.dietaryRestrictions ?? [],
                     options: _dietOptions,
-                    onChanged: (value) {
+                    color: const Color(0xFF7F56D9),
+                    onTap: () async {
+                      final selected = await _showMultiSelectDialog(
+                        context: context,
+                        title: 'Dietary Restrictions',
+                        options: _dietOptions,
+                        initialSelections: _currentUserPreferences.dietaryRestrictions ?? [],
+                      );
                       setState(() {
-                        _currentUserPreferences.dietaryRestrictions = value ?? 'None';
+                        _currentUserPreferences.dietaryRestrictions = selected;
                       });
                     },
-                    color: const Color(0xFF7F56D9),
-                    isLoading: _isSavingPreferences,
                   ),
                   const SizedBox(height: 12),
-                  _buildPreferenceDropdown(
+                  _buildMultiSelectPreference(
                     icon: Icons.health_and_safety,
                     title: 'Allergies',
-                    value: _currentUserPreferences.allergies ?? 'None',
+                    selectedItems: _currentUserPreferences.allergies ?? [],
                     options: _allergyOptions,
-                    onChanged: (value) {
+                    color: Colors.redAccent,
+                    onTap: () async {
+                      final selected = await _showMultiSelectDialog(
+                        context: context,
+                        title: 'Allergies',
+                        options: _allergyOptions,
+                        initialSelections: _currentUserPreferences.allergies ?? [],
+                      );
                       setState(() {
-                        _currentUserPreferences.allergies = value ?? 'None';
+                        _currentUserPreferences.allergies = selected;
                       });
                     },
-                    color: Colors.redAccent,
-                    isLoading: _isSavingPreferences,
                   ),
                   const SizedBox(height: 12),
-                  _buildPreferenceDropdown(
+                  _buildMultiSelectPreference(
                     icon: Icons.flag,
                     title: 'Cuisine Preferences',
-                    value: _currentUserPreferences.cuisinePreferences ?? 'None',
+                    selectedItems: _currentUserPreferences.cuisinePreferences ?? [],
                     options: _cuisineOptions,
-                    onChanged: (value) {
+                    color: Colors.orange,
+                    onTap: () async {
+                      final selected = await _showMultiSelectDialog(
+                        context: context,
+                        title: 'Cuisine Preferences',
+                        options: _cuisineOptions,
+                        initialSelections: _currentUserPreferences.cuisinePreferences ?? [],
+                      );
                       setState(() {
-                        _currentUserPreferences.cuisinePreferences = value ?? 'None';
+                        _currentUserPreferences.cuisinePreferences = selected;
                       });
                     },
-                    color: Colors.orange,
-                    isLoading: _isSavingPreferences,
                   ),
                   const SizedBox(height: 12),
-                  _buildPreferenceDropdown(
-                    icon: Icons.star,
-                    title: 'Skill Level',
-                    value: _currentUserPreferences.skillLevel ?? 'Beginner',
-                    options: _skillOptions,
-                    onChanged: (value) {
+                  _buildDiabeticPreference(
+                    icon: Icons.medical_services,
+                    title: 'Diabetic Friendly',
+                    value: _currentUserPreferences.diabeticFriendly ?? false,
+                    color: Colors.green,
+                    onTap: () async {
+                      final result = await _showDiabeticDialog(
+                        context,
+                        _currentUserPreferences.diabeticFriendly ?? false,
+                      );
                       setState(() {
-                        _currentUserPreferences.skillLevel = value ?? 'Beginner';
+                        _currentUserPreferences.diabeticFriendly = result;
                       });
                     },
-                    color: Colors.amber,
-                    isLoading: _isSavingPreferences,
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
 
-            // Save/Update Button
             ElevatedButton(
               onPressed: () {
                 _updateUserDetails();
                 _updateUserPreferences();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF7F56D9), // Use `backgroundColor` instead of `primary`
+                backgroundColor: const Color(0xFF7F56D9),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -490,7 +534,119 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 ),
               ),
             )
+          ],
+        ),
+      ),
+    );
+  }
 
+  Widget _buildMultiSelectPreference({
+    required IconData icon,
+    required String title,
+    required List<String> selectedItems,
+    required List<String> options,
+    required Color color,
+    required Function() onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    selectedItems.isEmpty ? 'None selected' : selectedItems.join(', '),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDiabeticPreference({
+    required IconData icon,
+    required String title,
+    required bool value,
+    required Color color,
+    required Function() onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    value ? 'Yes' : 'No',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right),
           ],
         ),
       ),
@@ -647,85 +803,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
       ],
     );
   }
-
-  Widget _buildPreferenceDropdown({
-    required IconData icon,
-    required String title,
-    required String value,
-    required List<String> options,
-    required Function(String?) onChanged,
-    required Color color,
-    required bool isLoading,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(height: 4),
-                DropdownButtonFormField<String>(
-                  value: value,
-                  onChanged: onChanged,
-                  items: options.map((option) {
-                    return DropdownMenuItem<String>(
-                      value: option,
-                      child: Text(
-                        option,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                    isDense: true,
-                  ),
-                  icon: const Icon(Icons.arrow_drop_down),
-                  borderRadius: BorderRadius.circular(12),
-                  dropdownColor: Colors.white,
-                ),
-              ],
-            ),
-          ),
-          if (isLoading)
-            const Padding(
-              padding: EdgeInsets.only(left: 8.0),
-              child: SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
 }
 
 class UserDetails {
@@ -755,24 +832,92 @@ class UserDetails {
 }
 
 class UserPreferences {
-  String? dietaryRestrictions;
-  String? allergies;
-  String? cuisinePreferences;
-  String? skillLevel;
+  List<String>? dietaryRestrictions;
+  List<String>? allergies;
+  List<String>? cuisinePreferences;
+  bool? diabeticFriendly;
 
   UserPreferences({
     this.dietaryRestrictions,
     this.allergies,
     this.cuisinePreferences,
-    this.skillLevel,
+    this.diabeticFriendly,
   });
 
   factory UserPreferences.fromJson(Map<String, dynamic> json) {
     return UserPreferences(
-      dietaryRestrictions: json['dietaryRestrictions'] ?? 'None',
-      allergies: json['allergies'] ?? 'None',
-      cuisinePreferences: json['cuisinePreferences'] ?? 'None',
-      skillLevel: json['skillLevel'] ?? 'Beginner',
+      dietaryRestrictions: json['dietaryRestrictions'] != null
+          ? List<String>.from(json['dietaryRestrictions'])
+          : [],
+      allergies: json['allergies'] != null
+          ? List<String>.from(json['allergies'])
+          : [],
+      cuisinePreferences: json['cuisinePreferences'] != null
+          ? List<String>.from(json['cuisinePreferences'])
+          : [],
+      diabeticFriendly: json['diabeticFriendly'] ?? false,
+    );
+  }
+}
+
+class MultiSelectDialog extends StatefulWidget {
+  final String title;
+  final List<String> options;
+  final List<String> initialSelections;
+
+  const MultiSelectDialog({
+    required this.title,
+    required this.options,
+    required this.initialSelections,
+    super.key,
+  });
+
+  @override
+  State<MultiSelectDialog> createState() => _MultiSelectDialogState();
+}
+
+class _MultiSelectDialogState extends State<MultiSelectDialog> {
+  late List<String> selectedOptions;
+
+  @override
+  void initState() {
+    super.initState();
+    selectedOptions = List.from(widget.initialSelections);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: SingleChildScrollView(
+        child: Column(
+          children: widget.options.map((option) {
+            return CheckboxListTile(
+              title: Text(option),
+              value: selectedOptions.contains(option),
+              onChanged: (bool? value) {
+                setState(() {
+                  if (value == true) {
+                    selectedOptions.add(option);
+                  } else {
+                    selectedOptions.remove(option);
+                  }
+                });
+              },
+            );
+          }).toList(),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, selectedOptions),
+          child: const Text('Save'),
+        ),
+      ],
     );
   }
 }

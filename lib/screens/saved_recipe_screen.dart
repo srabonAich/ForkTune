@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:ForkTune/models/recipe.dart';
-import 'package:ForkTune/providers/user_provider.dart';
-import 'package:ForkTune/services/api_service.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:ForkTune/screens/meal_planner_page.dart';
+import 'package:ForkTune/screens/recipe_screen.dart';
 
 class SavedRecipesScreen extends StatefulWidget {
   const SavedRecipesScreen({super.key});
@@ -12,6 +13,7 @@ class SavedRecipesScreen extends StatefulWidget {
 }
 
 class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
+  final _secureStorage = const FlutterSecureStorage();
   bool _isLoading = false;
   List<Recipe> _savedRecipes = [];
 
@@ -22,41 +24,177 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
   }
 
   Future<void> _loadSavedRecipes() async {
-    if (!mounted) return;
-
     setState(() => _isLoading = true);
-
     try {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      await userProvider.loadSavedRecipes();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load saved recipes: ${e.toString()}')),
-        );
+      final token = await _secureStorage.read(key: 'token');
+      if (token == null) return;
+
+      final response = await http.get(
+        Uri.parse('http://localhost:8080/recipes/user/saved'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200 && response.body.isNotEmpty) {
+        final List<dynamic> data = json.decode(response.body);
+        setState(() {
+          _savedRecipes = data.map((json) => Recipe.fromJson(json)).toList();
+        });
       }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load saved recipes: ${e.toString()}')),
+      );
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      setState(() => _isLoading = false);
     }
   }
 
   Future<void> _removeRecipe(String recipeId) async {
     try {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      final success = await userProvider.removeSavedRecipe(recipeId);
+      final token = await _secureStorage.read(key: 'token');
+      if (token == null) return;
 
-      if (success && mounted) {
+
+      final response = await http.post(
+        Uri.parse('http://localhost:8080/recipes/toggle-save/remove'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({'id': recipeId}),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _savedRecipes.removeWhere((recipe) => recipe.id == recipeId);
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Recipe removed from saved')),
         );
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to remove recipe: ${e.toString()}')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to remove recipe: ${e.toString()}')),
+      );
     }
+  }
+
+  Widget _buildSavedRecipeCard(BuildContext context, Recipe recipe) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => RecipeScreen(recipe: recipe),
+            ),
+          );
+        },
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: 0, // Allow to be as small as needed
+            maxHeight: 240, // Set maximum height
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min, // Important to prevent overflow
+            children: [
+              // Image section
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(12),
+                ),
+                child: AspectRatio(
+                  aspectRatio: 1.5, // Fixed aspect ratio for images
+                  child: Image.network(
+                    recipe.imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      color: Colors.grey[200],
+                      child: const Center(
+                        child: Icon(Icons.fastfood, color: Colors.grey, size: 40),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // Content section
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      recipe.title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.access_time, size: 14, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${recipe.prepTime + recipe.cookTime} min',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const Spacer(),
+                        const Icon(Icons.star, size: 14, color: Colors.amber),
+                        const SizedBox(width: 4),
+                        Text(
+                          '4.5', // Default rating
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () => _removeRecipe(recipe.id),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          side: const BorderSide(color: Colors.red),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          'Remove',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -91,331 +229,15 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
               crossAxisCount: 2,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
-              childAspectRatio: 0.65,
+              childAspectRatio: 0.7, // Adjusted aspect ratio
             ),
             itemCount: _savedRecipes.length,
             itemBuilder: (context, index) {
-              final recipe = _savedRecipes[index];
-              return _buildSavedRecipeCard(context, recipe);
+              return _buildSavedRecipeCard(context, _savedRecipes[index]);
             },
           ),
         ),
       ),
     );
   }
-
-  Widget _buildSavedRecipeCard(BuildContext context, Recipe recipe) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.pushNamed(
-          context,
-          '/recipe',
-          arguments: recipe.id, // Pass recipe ID to details screen
-        );
-      },
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(12),
-              ),
-              child: recipe.image.isNotEmpty
-                  ? Image.network(
-                recipe.image,
-                height: 90,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  height: 90,
-                  color: Colors.grey[200],
-                  child: const Icon(Icons.fastfood, size: 40),
-                ),
-              )
-                  : Container(
-                height: 90,
-                color: Colors.grey[200],
-                child: const Icon(Icons.fastfood, size: 40),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    recipe.title,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.access_time,
-                        size: 16,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${recipe.prepTime + recipe.cookTime} mins',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      const Spacer(),
-                      const Icon(
-                        Icons.star,
-                        size: 16,
-                        color: Colors.amber,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        recipe.rating.toStringAsFixed(1),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: () => _removeRecipe(recipe.id),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        side: const BorderSide(color: Colors.red),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text(
-                        'Remove',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.red,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
-
-
-
-
-/*
-
-import 'package:flutter/material.dart';
-
-class SavedRecipesScreen extends StatelessWidget {
-  const SavedRecipesScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Saved Recipes'),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: GridView.builder(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.65, // aspect ratio
-          ),
-          itemCount: 6, // Static count for demo
-          itemBuilder: (context, index) {
-            return _buildSavedRecipeCard(
-              context,
-              title: _sampleRecipes[index]['title']!,
-              imagePath: _sampleRecipes[index]['image']!,
-              prepTime: _sampleRecipes[index]['time']!,
-              rating: _sampleRecipes[index]['rating']!,
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSavedRecipeCard(
-      BuildContext context, {
-        required String title,
-        required String imagePath,
-        required String prepTime,
-        required String rating,
-      }) {
-    return GestureDetector(
-      onTap: () {
-        // Navigate to recipe details
-        Navigator.pushNamed(context, '/recipe');
-      },
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(12),
-              ),
-              child: Image.asset(
-                imagePath,
-                height: 90,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.access_time,
-                        size: 16,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        prepTime,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      const Spacer(),
-                      const Icon(
-                        Icons.star,
-                        size: 16,
-                        color: Colors.amber,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        rating,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: () {
-                        // Remove from saved
-                      },
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        side: const BorderSide(color: Colors.red),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text(
-                        'Remove',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.red,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Sample data for static implementation
-  static const List<Map<String, String>> _sampleRecipes = [
-    {
-      'title': 'Spicy Thai Green Curry',
-      'image': 'assets/greencurry.jpg',
-      'time': '45 mins',
-      'rating': '4.8',
-    },
-    {
-      'title': 'Classic Pasta Carbonara',
-      'image': 'assets/pizza.png',
-      'time': '30 mins',
-      'rating': '4.6',
-    },
-    {
-      'title': 'Avocado Toast',
-      'image': 'assets/avocado_toast.png',
-      'time': '15 mins',
-      'rating': '4.2',
-    },
-    {
-      'title': 'Chocolate Chip Cookies',
-      'image': 'assets/cake.jpg',
-      'time': '25 mins',
-      'rating': '4.9',
-    },
-    {
-      'title': 'Vegetable Stir Fry',
-      'image': 'assets/stirfry.jpg',
-      'time': '20 mins',
-      'rating': '4.3',
-    },
-    {
-      'title': 'Berry Smoothie Bowl',
-      'image': 'assets/yogurt.png',
-      'time': '10 mins',
-      'rating': '4.5',
-    },
-  ];
-}
-
-*/
