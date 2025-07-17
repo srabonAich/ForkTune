@@ -103,6 +103,12 @@ class _HomePageState extends State<HomePage> {
         final List<dynamic> data = json.decode(recipesResponse.body);
         setState(() {
           _allRecipes = data.map((json) => Recipe.fromJson(json)).toList();
+          // Sort recipes by rating in descending order
+          _allRecipes.sort((a, b) {
+            final aRating = a.rating ?? 0.0; // Treat null as 0.0
+            final bRating = b.rating ?? 0.0; // Treat null as 0.0
+            return bRating.compareTo(aRating);
+          });
           _filteredRecipes = List.from(_allRecipes);
         });
       }
@@ -113,6 +119,11 @@ class _HomePageState extends State<HomePage> {
     } finally {
       setState(() => _isLoading = false);
     }
+  }
+
+  // Get top 10 trending recipes (highest rated)
+  List<Recipe> _getTrendingRecipes() {
+    return _filteredRecipes.take(10).toList();
   }
 
   Future<void> _loadUnreadNotificationCount(String token) async {
@@ -202,6 +213,36 @@ class _HomePageState extends State<HomePage> {
 
       return true;
     }).toList();
+  }
+
+  Widget _buildTrendingSection() {
+    final trendingRecipes = _getTrendingRecipes();
+    if (trendingRecipes.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('Trending Now'),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 220,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            children: trendingRecipes.map((recipe) => Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: _buildFeaturedCard(
+                recipe.title,
+                recipe.imageUrl,
+                '${recipe.prepTime + recipe.cookTime} min',
+                '${recipe.rating}',
+                recipe,
+              ),
+            )).toList(),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildMealTypeSection(String mealType) {
@@ -658,6 +699,10 @@ class _HomePageState extends State<HomePage> {
                   _buildAppBar(context),
                   const SizedBox(height: 16),
                   _buildSearchBar(),
+                  const SizedBox(height: 24),
+
+                  // Trending Section (new addition)
+                  _buildTrendingSection(),
                   const SizedBox(height: 24),
 
                   // Dynamic Meal Type Sections

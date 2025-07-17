@@ -199,7 +199,7 @@ class _AIReviewScreenState extends State<AIReviewScreen> {
       );
 
       request.headers.addAll({
-        'Authorization': 'Bearer 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',
+        'Authorization': 'Bearer Your API Key',
         'HTTP-Referer': 'https://www.forktune.com',
         'X-Title': 'ForkTune',
         'Content-Type': 'application/json',
