@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:ForkTune/screens/meal_planner_page.dart';
+import 'package:ForkTune/screens/AIReviewScreen.dart';
 
 class RecipeScreen extends StatefulWidget {
   final Recipe recipe;
@@ -20,11 +21,149 @@ class _RecipeScreenState extends State<RecipeScreen> {
   int _servings = 2;
   final Color _primaryColor = const Color(0xFF7F56D9);
 
+  // Rating system variables
+  double? _userRating;
+  double _averageRating = 0.0;
+  int _ratingCount = 0;
+  bool _hasRated = false;
+  double? _pendingRating;
+  bool _isRatingLoading = false;
+
   @override
   void initState() {
     super.initState();
     _ingredientChecked = List.filled(widget.recipe.ingredients.length, false);
     _checkIfSaved();
+    _loadRatings();
+  }
+
+  Future<void> _loadRatings() async {
+    setState(() => _isRatingLoading = true);
+    try {
+      final token = await _secureStorage.read(key: 'token');
+      if (token == null) return;
+
+      // Get average rating
+      final avgResponse = await http.get(
+        Uri.parse('http://localhost:8080/recipes/${widget.recipe.id}/rating'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (avgResponse.statusCode == 200) {
+        final avgData = json.decode(avgResponse.body);
+        setState(() {
+          _averageRating = avgData['averageRating']?.toDouble() ?? 0.0;
+          _ratingCount = avgData['count'] ?? 0;
+        });
+      }
+
+      // Check if user has already rated
+      final userRatingResponse = await http.get(
+        Uri.parse('http://localhost:8080/recipes/${widget.recipe.id}/user-rating'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (userRatingResponse.statusCode == 200) {
+        final userRatingData = json.decode(userRatingResponse.body);
+        setState(() {
+          _userRating = userRatingData['rating']?.toDouble();
+          _hasRated = _userRating != null;
+          _pendingRating = _userRating;
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to load ratings")),
+      );
+    } finally {
+      setState(() => _isRatingLoading = false);
+    }
+  }
+
+  Future<void> _submitRating() async {
+    if (_pendingRating == null) return;
+
+    setState(() => _isRatingLoading = true);
+    try {
+      final token = await _secureStorage.read(key: 'token');
+      if (token == null) return;
+
+      final response = await http.post(
+        Uri.parse('http://localhost:8080/recipes/rate'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'recipeId': widget.recipe.id,
+          'rating': _pendingRating,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _userRating = _pendingRating;
+          _hasRated = true;
+        });
+        await _loadRatings();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Rating submitted successfully!"),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Failed to submit rating"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => _isRatingLoading = false);
+    }
+  }
+
+  Future<void> _deleteRating() async {
+    setState(() => _isRatingLoading = true);
+    try {
+      final token = await _secureStorage.read(key: 'token');
+      if (token == null) return;
+
+      final response = await http.delete(
+        Uri.parse('http://localhost:8080/recipes/${widget.recipe.id}/rating'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _userRating = null;
+          _hasRated = false;
+          _pendingRating = null;
+        });
+        await _loadRatings();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Rating removed successfully!"),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Failed to remove rating"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => _isRatingLoading = false);
+    }
   }
 
   Future<void> _checkIfSaved() async {
@@ -44,7 +183,9 @@ class _RecipeScreenState extends State<RecipeScreen> {
         });
       }
     } catch (e) {
-      // Handle error
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to check saved status")),
+      );
     } finally {
       setState(() => _isLoading = false);
     }
@@ -73,13 +214,17 @@ class _RecipeScreenState extends State<RecipeScreen> {
           SnackBar(
             content: Text(_isSaved ? "Recipe saved!" : "Recipe unsaved"),
             behavior: SnackBarBehavior.floating,
+            backgroundColor: _isSaved ? Colors.green : Colors.orange,
             duration: const Duration(seconds: 1),
           ),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to update saved status")),
+        const SnackBar(
+          content: Text("Failed to update saved status"),
+          backgroundColor: Colors.red,
+        ),
       );
     } finally {
       setState(() => _isLoading = false);
@@ -145,7 +290,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
                         const Icon(Icons.timer, size: 16, color: Colors.white),
                         const SizedBox(width: 4),
                         Text(
-                          "${widget.recipe.prepTime + widget.recipe.cookTime} mins",
+                          "Prep: ${widget.recipe.prepTime} mins   Cook: ${widget.recipe.cookTime} mins",
                           style: const TextStyle(color: Colors.white),
                         ),
                       ],
@@ -161,7 +306,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title and Rating
+                  // Title and Average Rating
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -173,18 +318,107 @@ class _RecipeScreenState extends State<RecipeScreen> {
                           ),
                         ),
                       ),
-                      Row(
-                        children: const [
-                          Icon(Icons.star, color: Colors.amber, size: 20),
-                          SizedBox(width: 4),
-                          Text("4.8"), // Static rating for now
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.star, color: Colors.amber, size: 20),
+                              const SizedBox(width: 4),
+                              Text(_averageRating.toStringAsFixed(1)),
+                            ],
+                          ),
+                          Text(
+                            "(${_ratingCount} ${_ratingCount == 1 ? 'rating' : 'ratings'})",
+                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
                         ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 16),
 
-                  // Tags
+                  // Rating Section
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _hasRated ? "YOUR RATING" : "RATE THIS RECIPE",
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[600],
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+
+                          if (_isRatingLoading)
+                            const Center(child: CircularProgressIndicator())
+                          else
+                            Column(
+                              children: [
+                                // Star Rating
+                                StarRating(
+                                  rating: _pendingRating ?? 0,
+                                  onRatingChanged: (rating) {
+                                    setState(() {
+                                      _pendingRating = rating;
+                                    });
+                                  },
+                                  starSize: 36,
+                                ),
+                                const SizedBox(height: 16),
+
+                                // Submit/Remove buttons
+                                if (_hasRated)
+                                  OutlinedButton(
+                                    onPressed: _deleteRating,
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.red,
+                                      side: const BorderSide(color: Colors.red),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 24, vertical: 12),
+                                    ),
+                                    child: const Text("REMOVE RATING"),
+                                  )
+                                else if (_pendingRating != null)
+                                  ElevatedButton(
+                                    onPressed: _submitRating,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: _primaryColor,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12), // Move padding here
+                                    ),
+                                    child: const Text(
+                                      "SUBMIT RATING",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  )
+
+                              ],
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
                   // Tags
                   Wrap(
                     spacing: 8,
@@ -196,14 +430,11 @@ class _RecipeScreenState extends State<RecipeScreen> {
                       if (widget.recipe.preferences?['cuisinePreferences'] != null &&
                           widget.recipe.preferences!['cuisinePreferences'].isNotEmpty)
                         ...widget.recipe.preferences!['cuisinePreferences']
-                            .take(2) // Limit to 2 cuisine types to avoid overflow
+                            .take(2)
                             .map((cuisine) => _buildTag(cuisine))
                             .toList(),
                     ],
                   ),
-                  const SizedBox(height: 16),
-
-
                   const SizedBox(height: 16),
 
                   // Description
@@ -260,15 +491,19 @@ class _RecipeScreenState extends State<RecipeScreen> {
           ],
         ),
       ),
-      // floatingActionButton: FloatingActionButton.extended(
-      //   onPressed: () {
-      //     // Start cooking action
-      //     Navigator.pushNamed(context, '/cooking-mode', arguments: widget.recipe);
-      //   },
-      //   icon: const Icon(Icons.restaurant_menu),
-      //   label: const Text("Start Cooking"),
-      //   backgroundColor: _primaryColor,
-      // ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => AIReviewScreen(recipe: widget.recipe),
+            ),
+          );
+        },
+        icon: const Icon(Icons.restaurant_menu),
+        label: const Text("AI review"),
+        backgroundColor: _primaryColor,
+      ),
     );
   }
 
@@ -418,6 +653,38 @@ class _RecipeScreenState extends State<RecipeScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class StarRating extends StatelessWidget {
+  final double rating;
+  final Function(double) onRatingChanged;
+  final double starSize;
+  final Color? color;
+
+  const StarRating({
+    super.key,
+    this.rating = 0.0,
+    required this.onRatingChanged,
+    this.starSize = 24.0,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(5, (index) {
+        return GestureDetector(
+          onTap: () => onRatingChanged(index + 1.0),
+          child: Icon(
+            index < rating ? Icons.star : Icons.star_border,
+            size: starSize,
+            color: color ?? Colors.amber,
+          ),
+        );
+      }),
     );
   }
 }

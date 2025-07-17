@@ -158,7 +158,7 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
                         const Icon(Icons.star, size: 14, color: Colors.amber),
                         const SizedBox(width: 4),
                         Text(
-                          '4.5', // Default rating
+                          '${recipe.rating}',
                           style: const TextStyle(
                             fontSize: 12,
                             color: Colors.grey,

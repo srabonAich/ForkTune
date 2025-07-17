@@ -30,6 +30,7 @@ class Recipe {
   final List<String> instructions;
   final Map<String, dynamic>? preferences;
   final int? flag;
+  final double? rating;
 
   Recipe({
     required this.id,
@@ -48,6 +49,7 @@ class Recipe {
     required this.instructions,
     this.preferences,
     this.flag,
+    this.rating,
   });
 
   factory Recipe.fromJson(Map<String, dynamic> json) {
@@ -64,6 +66,7 @@ class Recipe {
       protein: json['protein'] is int ? json['protein'] : int.tryParse(json['protein'].toString()) ?? 0,
       fat: json['fat'] is int ? json['fat'] : int.tryParse(json['fat'].toString()) ?? 0,
       flag: json['flag'] is int ? json['flag'] : int.tryParse(json['flag'].toString()) ?? 0,
+      rating: json['rating'] is double ? json['rating'] : (json['rating'] is int ? json['rating'].toDouble() : 0.0),
       carbs: json['carbs'] is int ? json['carbs'] : int.tryParse(json['carbs'].toString()) ?? 0,
       ingredients: List<Map<String, String>>.from(
         (json['ingredients'] as List?)?.map((ing) => {
@@ -517,6 +520,15 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
+                        Text(
+                          recipe.description,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ],
                     ),
                   ),

@@ -16,28 +16,55 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final List<String> _mealTypes = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
   List<Recipe> _allRecipes = [];
+  List<Recipe> _filteredRecipes = [];
   final _secureStorage = const FlutterSecureStorage();
   bool _isLoading = false;
   String? _profileImageBase64;
   UserPreferences? _userPreferences;
+  final TextEditingController _searchController = TextEditingController();
+  int _unreadNotificationCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    _filterRecipes();
+  }
+
+  void _filterRecipes() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      _filteredRecipes = _allRecipes.where((recipe) {
+        return recipe.title.toLowerCase().contains(query);
+      }).toList();
+    });
   }
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
       final token = await _secureStorage.read(key: 'token');
-      // print('Token: $token');
       if (token == null || token.isEmpty) {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const LoginScreen()),
         );
+        return;
       }
+
+      // Load unread notification count first
+      await _loadUnreadNotificationCount(token);
 
       // Load user profile and preferences
       final userDetailsResponse = await http.get(
@@ -65,7 +92,7 @@ class _HomePageState extends State<HomePage> {
 
       // Load recipes
       final recipesResponse = await http.get(
-        Uri.parse('http://localhost:8080/recipes/user'),
+        Uri.parse('http://localhost:8080/recipes/user/publish'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -76,23 +103,71 @@ class _HomePageState extends State<HomePage> {
         final List<dynamic> data = json.decode(recipesResponse.body);
         setState(() {
           _allRecipes = data.map((json) => Recipe.fromJson(json)).toList();
+          _filteredRecipes = List.from(_allRecipes);
         });
       }
     } catch (e) {
-      // Handle error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading data: ${e.toString()}')),
+      );
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
+  Future<void> _loadUnreadNotificationCount(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:8080/recipes/notifications/unread-count'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          _unreadNotificationCount = data['count'] ?? 0;
+        });
+      }
+    } catch (e) {
+      // If there's an error, we'll just keep the count at 0
+      setState(() {
+        _unreadNotificationCount = 0;
+      });
+    }
+  }
+
+  Future<void> _markAllAsRead() async {
+    final token = await _secureStorage.read(key: 'token');
+    if (token == null) return;
+
+    try {
+      await http.post(
+        Uri.parse('http://localhost:8080/recipes/notifications/mark-all-read'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      setState(() {
+        _unreadNotificationCount = 0;
+      });
+
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   const SnackBar(content: Text('All notifications marked as read')),
+      // );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to mark all as read')),
+      );
+    }
+  }
+
   List<Recipe> _getRecipesByMealType(String mealType) {
-    return _allRecipes.where((recipe) => recipe.mealType == mealType).toList();
+    return _filteredRecipes.where((recipe) => recipe.mealType == mealType).toList();
   }
 
   List<Recipe> _getRecommendedRecipes() {
-    if (_userPreferences == null) return _allRecipes.toList();
+    if (_userPreferences == null) return _filteredRecipes.toList();
 
-    return _allRecipes.where((recipe) {
+    return _filteredRecipes.where((recipe) {
       if (_userPreferences!.allergies != null &&
           _userPreferences!.allergies!.isNotEmpty) {
         if (recipe.ingredients.any((ingredient) =>
@@ -149,7 +224,7 @@ class _HomePageState extends State<HomePage> {
                 recipe.title,
                 recipe.imageUrl,
                 '${recipe.prepTime + recipe.cookTime} min',
-                '4.5', // Default rating for now
+                '${recipe.rating}',
                 recipe,
               ),
             )).toList(),
@@ -338,11 +413,41 @@ class _HomePageState extends State<HomePage> {
         ),
         Row(
           children: [
-            IconButton(
-              icon: const Icon(Icons.notifications_none),
-              onPressed: () {
-                Navigator.pushNamed(context, '/notifications');
-              },
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.notifications_none),
+                  onPressed: () {
+                    _markAllAsRead();
+                    Navigator.pushNamed(context, '/notifications');
+                  },
+                ),
+                if (_unreadNotificationCount > 0)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        _unreadNotificationCount > 9 ? '9+' : _unreadNotificationCount.toString(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(width: 8),
             GestureDetector(
@@ -383,6 +488,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildSearchBar() {
     return TextField(
+      controller: _searchController,
       decoration: InputDecoration(
         hintText: 'Search for recipes...',
         hintStyle: TextStyle(color: Colors.grey[500]),
@@ -394,17 +500,6 @@ class _HomePageState extends State<HomePage> {
         filled: true,
         fillColor: Colors.white,
         contentPadding: const EdgeInsets.symmetric(vertical: 0),
-        suffixIcon: Container(
-          margin: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: const Color(0xFF6A6CFF),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.tune, color: Colors.white),
-            onPressed: () {},
-          ),
-        ),
       ),
     );
   }
@@ -445,7 +540,7 @@ class _HomePageState extends State<HomePage> {
             recipe.title,
             recipe.imageUrl,
             '${recipe.prepTime + recipe.cookTime} min',
-            '4.5', // Default rating
+            '${recipe.rating}',
             recipe,
           ),
       ).toList(),
