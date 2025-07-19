@@ -84,7 +84,7 @@ class Recipe {
   }
 
   String get imageUrl => imageId != null
-      ? 'http://localhost:8080/recipes/image/$imageId'
+      ? 'https://forktune-backend-1.onrender.com/recipes/image/$imageId'
       : 'assets/images/default_recipe.jpg';
 
   bool get isPublished => flag == 1;
@@ -124,7 +124,7 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
       }
 
       final response = await http.get(
-        Uri.parse('http://localhost:8080/recipes/user'),
+        Uri.parse('https://forktune-backend-1.onrender.com/recipes/user'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -186,7 +186,7 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
       }
 
       final response = await http.post(
-        Uri.parse('http://localhost:8080/recipes/delete'),
+        Uri.parse('https://forktune-backend-1.onrender.com/recipes/delete'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -288,7 +288,7 @@ class _MealPlanningPageState extends State<MealPlanningPage> {
       }
 
       final response = await http.post(
-        Uri.parse('http://localhost:8080/recipes/add-preferences'),
+        Uri.parse('https://forktune-backend-1.onrender.com/recipes/add-preferences'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',

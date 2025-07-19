@@ -46,7 +46,7 @@ class _AIReviewScreenState extends State<AIReviewScreen> {
     if (token == null) throw Exception('No authentication token found');
 
     final response = await http.get(
-      Uri.parse('http://localhost:8080/user/preferences'),
+      Uri.parse('https://forktune-backend-1.onrender.com/user/preferences'),
       headers: {'Authorization': 'Bearer $token'},
     );
 

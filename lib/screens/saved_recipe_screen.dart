@@ -30,7 +30,7 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
       if (token == null) return;
 
       final response = await http.get(
-        Uri.parse('http://localhost:8080/recipes/user/saved'),
+        Uri.parse('https://forktune-backend-1.onrender.com/recipes/user/saved'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -59,7 +59,7 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
 
 
       final response = await http.post(
-        Uri.parse('http://localhost:8080/recipes/toggle-save/remove'),
+        Uri.parse('https://forktune-backend-1.onrender.com/recipes/toggle-save/remove'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',

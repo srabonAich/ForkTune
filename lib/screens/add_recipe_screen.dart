@@ -78,7 +78,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
         if (token == null) throw Exception('No authentication token found');
         var request = http.MultipartRequest(
           'POST',
-          Uri.parse('http://localhost:8080/recipes/upload-image'),
+          Uri.parse('https://forktune-backend-1.onrender.com/recipes/upload-image'),
         );
         request.headers['Authorization'] = 'Bearer $token';
 
@@ -127,7 +127,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
 
       // Step 3: Send recipe data
       final response = await http.post(
-        Uri.parse('http://localhost:8080/recipes/saveRecipes'),
+        Uri.parse('https://forktune-backend-1.onrender.com/recipes/saveRecipes'),
         headers: {'Authorization': 'Bearer $token',
           'Content-Type': 'application/json'
         },

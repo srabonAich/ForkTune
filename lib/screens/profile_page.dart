@@ -34,7 +34,7 @@ class _ProfilePageState extends State<ProfilePage> {
     if (token == null) throw Exception('No authentication token found');
 
     final response = await http.get(
-      Uri.parse('http://localhost:8080/user/details'),
+      Uri.parse('https://forktune-backend-1.onrender.com/user/details'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
@@ -50,7 +50,7 @@ class _ProfilePageState extends State<ProfilePage> {
     if (token == null) throw Exception('No authentication token found');
 
     final response = await http.get(
-      Uri.parse('http://localhost:8080/user/preferences'),
+      Uri.parse('https://forktune-backend-1.onrender.com/user/preferences'),
       headers: {'Authorization': 'Bearer $token'},
     );
 

@@ -71,7 +71,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
     try {
       // Backend API call to send verification code
       final response = await http.post(
-        Uri.parse('http://localhost:8080/send-code-for-reset-password'),
+        Uri.parse('https://forktune-backend-1.onrender.com/send-code-for-reset-password'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': _emailController.text.trim()}),
       );
@@ -105,7 +105,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
     try {
       // Backend API call to verify code
       final response = await http.post(
-        Uri.parse('http://localhost:8080/verify-email'),
+        Uri.parse('https://forktune-backend-1.onrender.com/verify-email'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': _emailController.text.trim(),
@@ -166,7 +166,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
 
       // Backend API call to reset password
       final response = await http.post(
-        Uri.parse('http://localhost:8080/reset-password'),
+        Uri.parse('https://forktune-backend-1.onrender.com/reset-password'),
         headers: {'Content-Type': 'application/json',
           'Authorization': 'Bearer $codeToken',
         },

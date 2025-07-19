@@ -76,7 +76,7 @@ class _EditRecipeScreenState extends State<EditRecipeScreen> {
       }
 
       final response = await http.post(
-        Uri.parse('http://localhost:8080/recipes/edit'),
+        Uri.parse('https://forktune-backend-1.onrender.com/recipes/edit'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',

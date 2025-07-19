@@ -29,7 +29,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       if (token == null) return;
 
       final response = await http.get(
-        Uri.parse('http://localhost:8080/recipes/notification'),
+        Uri.parse('https://forktune-backend-1.onrender.com/recipes/notification'),
         headers: {'Authorization': 'Bearer $token'},
       );
 

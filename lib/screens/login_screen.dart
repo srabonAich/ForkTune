@@ -63,7 +63,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
       try {
         final response = await http.post(
-          Uri.parse('http://localhost:8080/login'),
+          Uri.parse('https://forktune-backend-1.onrender.com/login'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({'email': email, 'password': password}),
         );
@@ -410,7 +410,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen>
 
       try {
         final response = await http.post(
-          Uri.parse('http://localhost:8080/admin/login'),
+          Uri.parse('https://forktune-backend-1.onrender.com/admin/login'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({'email': email, 'password': password}),
         );

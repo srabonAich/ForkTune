@@ -43,7 +43,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       }
 
       final response = await http.get(
-        Uri.parse('http://localhost:8080/recipes/admin'),
+        Uri.parse('https://forktune-backend-1.onrender.com/recipes/admin'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -104,7 +104,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       final newStatus = recipe.flag == 1 ? 0 : 1;
 
       final response = await http.post(
-        Uri.parse('http://localhost:8080/recipes/admin/publishORunpublish'),
+        Uri.parse('https://forktune-backend-1.onrender.com/recipes/admin/publishORunpublish'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -156,7 +156,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       if (token == null) return;
 
       final response = await http.post(
-        Uri.parse('http://localhost:8080/recipes/admin/delete'),
+        Uri.parse('https://forktune-backend-1.onrender.com/recipes/admin/delete'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',

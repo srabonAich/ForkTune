@@ -152,7 +152,7 @@ class _LaunchScreenState extends State<LaunchScreen> with TickerProviderStateMix
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
-                          Navigator.pushNamed(context, '/home');
+                          Navigator.pushNamed(context, '/');
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF6A6CFF),

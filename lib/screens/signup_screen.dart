@@ -340,7 +340,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
     try {
       // Backend API call to send verification code
       final response = await http.post(
-        Uri.parse('http://localhost:8080/send-code'),
+        Uri.parse('https://forktune-backend-1.onrender.com/send-code'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': _emailController.text.trim()}),
       );
@@ -374,7 +374,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
     try {
       // Backend API call to verify code
       final response = await http.post(
-        Uri.parse('http://localhost:8080/verify-email'),
+        Uri.parse('https://forktune-backend-1.onrender.com/verify-email'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': _emailController.text.trim(),
@@ -462,7 +462,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
 
       // Backend API call to complete registration
       final response = await http.post(
-        Uri.parse('http://localhost:8080/register'),
+        Uri.parse('https://forktune-backend-1.onrender.com/register'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $codeToken',  // Add the token to the headers

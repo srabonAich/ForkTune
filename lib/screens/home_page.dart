@@ -68,7 +68,7 @@ class _HomePageState extends State<HomePage> {
 
       // Load user profile and preferences
       final userDetailsResponse = await http.get(
-        Uri.parse('http://localhost:8080/user/details'),
+        Uri.parse('https://forktune-backend-1.onrender.com/user/details'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -80,7 +80,7 @@ class _HomePageState extends State<HomePage> {
       }
 
       final preferencesResponse = await http.get(
-        Uri.parse('http://localhost:8080/user/preferences'),
+        Uri.parse('https://forktune-backend-1.onrender.com/user/preferences'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -92,7 +92,7 @@ class _HomePageState extends State<HomePage> {
 
       // Load recipes
       final recipesResponse = await http.get(
-        Uri.parse('http://localhost:8080/recipes/user/publish'),
+        Uri.parse('https://forktune-backend-1.onrender.com/recipes/user/publish'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -129,7 +129,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _loadUnreadNotificationCount(String token) async {
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:8080/recipes/notifications/unread-count'),
+        Uri.parse('https://forktune-backend-1.onrender.com/recipes/notifications/unread-count'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -153,7 +153,7 @@ class _HomePageState extends State<HomePage> {
 
     try {
       await http.post(
-        Uri.parse('http://localhost:8080/recipes/notifications/mark-all-read'),
+        Uri.parse('https://forktune-backend-1.onrender.com/recipes/notifications/mark-all-read'),
         headers: {'Authorization': 'Bearer $token'},
       );
 

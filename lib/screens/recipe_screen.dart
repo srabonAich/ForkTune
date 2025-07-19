@@ -45,7 +45,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
 
       // Get average rating
       final avgResponse = await http.get(
-        Uri.parse('http://localhost:8080/recipes/${widget.recipe.id}/rating'),
+        Uri.parse('https://forktune-backend-1.onrender.com/recipes/${widget.recipe.id}/rating'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -59,7 +59,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
 
       // Check if user has already rated
       final userRatingResponse = await http.get(
-        Uri.parse('http://localhost:8080/recipes/${widget.recipe.id}/user-rating'),
+        Uri.parse('https://forktune-backend-1.onrender.com/recipes/${widget.recipe.id}/user-rating'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -89,7 +89,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
       if (token == null) return;
 
       final response = await http.post(
-        Uri.parse('http://localhost:8080/recipes/rate'),
+        Uri.parse('https://forktune-backend-1.onrender.com/recipes/rate'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -134,7 +134,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
       if (token == null) return;
 
       final response = await http.delete(
-        Uri.parse('http://localhost:8080/recipes/${widget.recipe.id}/rating'),
+        Uri.parse('https://forktune-backend-1.onrender.com/recipes/${widget.recipe.id}/rating'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -173,7 +173,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
       if (token == null) return;
 
       final response = await http.get(
-        Uri.parse('http://localhost:8080/recipes/is-saved/${widget.recipe.id}'),
+        Uri.parse('https://forktune-backend-1.onrender.com/recipes/is-saved/${widget.recipe.id}'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -198,7 +198,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
       if (token == null) return;
 
       final response = await http.post(
-        Uri.parse('http://localhost:8080/recipes/toggle-save'),
+        Uri.parse('https://forktune-backend-1.onrender.com/recipes/toggle-save'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',

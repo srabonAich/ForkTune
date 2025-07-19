@@ -43,12 +43,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
       if (token == null) throw Exception('No authentication token found');
 
       final detailsResponse = await http.get(
-        Uri.parse('http://localhost:8080/user/details'),
+        Uri.parse('https://forktune-backend-1.onrender.com/user/details'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
       final preferencesResponse = await http.get(
-        Uri.parse('http://localhost:8080/user/preferences'),
+        Uri.parse('https://forktune-backend-1.onrender.com/user/preferences'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -143,7 +143,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       }
 
       final response = await http.post(
-        Uri.parse('http://localhost:8080/user/update-details'),
+        Uri.parse('https://forktune-backend-1.onrender.com/user/update-details'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -189,7 +189,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       if (token == null) throw Exception('No authentication token found');
 
       final response = await http.post(
-        Uri.parse('http://localhost:8080/user/update-preferences'),
+        Uri.parse('https://forktune-backend-1.onrender.com/user/update-preferences'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
